@@ -8,6 +8,7 @@ import { construirPoliticas } from './policy/index.js'
 import { abrirSesion } from './wdk/session.js'
 import { correr } from './run.js'
 import { correrEval } from './eval/run.js'
+import { crearApi } from './api/server.js'
 
 const AYUDA = `cerrojo — el agente propone, el cerrojo decide
 
@@ -15,6 +16,7 @@ const AYUDA = `cerrojo — el agente propone, el cerrojo decide
   cerrojo eval      corre el golden set de casos N veces y reporta falsos permisos
   cerrojo policy    muestra las politicas activas, sin tocar la red
   cerrojo doctor    revisa la configuracion y el entorno
+  cerrojo serve     levanta la API HTTP local (para una app movil o web)
 
 Opciones de run:
   --csv <ruta>            CSV de nomina (por defecto: ./data/nomina_agosto.csv)
@@ -48,6 +50,7 @@ try {
     case 'eval': await cmdEval(); break
     case 'policy': await cmdPolicy(); break
     case 'doctor': await cmdDoctor(); break
+    case 'serve': await cmdServe(); break
     default: console.log(AYUDA)
   }
 } catch (err) {
@@ -100,6 +103,22 @@ async function cmdEval () {
   }
 
   process.exit(reporte.falsosPermisos > 0 || reporte.aciertos < reporte.total ? 1 : 0)
+}
+
+async function cmdServe () {
+  const puerto = Number(valor('puerto', process.env.CERROJO_API_PORT ?? '8787'))
+  const host = valor('host', process.env.CERROJO_API_HOST ?? '127.0.0.1')
+
+  crearApi({ cfg }).listen(puerto, host, () => {
+    console.log(`\ncerrojo API en http://${host}:${puerto}`)
+    console.log('  GET  /salud          estado del servicio')
+    console.log('  GET  /politicas      topes, allowlist y reglas activas')
+    console.log('  GET  /estado-diario  acumulado del dia contra el tope')
+    console.log('  POST /simular        { destinatario, monto_base } -> ALLOW | DENY con regla y razon')
+    console.log('  POST /correr         { csv?, instruccion? } -> recibo completo')
+    console.log('  GET  /corridas/:id   recibo de una corrida anterior')
+    console.log('\n  Ningun endpoint envia fondos: la API es dry-run por construccion.\n')
+  })
 }
 
 async function cmdPolicy () {
