@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "cerrojo": {
+      "command": "node",
+      "args": ["code/src/mcp/server.js"],
+      "env": {}
+    }
+  }
+}
