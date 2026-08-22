@@ -1,0 +1,11 @@
+beneficiario,direccion,monto,moneda,concepto
+Ana Restrepo,0xC4d2d867961b2791081Bd0B4fAc4e3bEC57a951b,250.00,USDT,nomina agosto
+Ana Restrepo,0xC4d2d867961b2791081Bd0B4fAc4e3bEC57a951b,250.00,USDT,nomina agosto
+Bruno Salas,0xB51803A4F24B2776456fEe6c869c95c811247318,-50.00,USDT,ajuste negativo
+Carla Nieto,0x257ff557AEc482560B2938264d5593a31A08104A,0.00,USDT,monto en cero
+Diego Ospina,0x17d5D5fC28ee6240e1129CCBf386458071b056F9,10.1234567,USDT,mas decimales que el token
+Elena Vargas,0xа9aBF679D7304cA82C10Bc13dB24447191FD45A5,100.00,USDT,homoglifo cirilico
+Fabio Cano,0xC4d2d867961b2791081Bd0B4fAc4e3bEC57a951b,1000000.00,USDT,monto gigante
+Gina Pena,,80.00,USDT,sin direccion
+Hugo Marin,0xB51803A4F24B2776456fEe6c869c95c811247318,   120.00   ,USDT,espacios alrededor del monto
+Irene Duque,0x257ff557AEc482560B2938264d5593a31A08104A,"1.234,56",USDT,miles con punto y decimal con coma

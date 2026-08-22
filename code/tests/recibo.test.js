@@ -21,8 +21,8 @@ const base = {
 }
 
 const cfg = cargarConfig()
-const limpio = join(RAIZ, 'data', 'nomina_agosto.csv')
-const envenenado = join(RAIZ, 'data', 'nomina_inyeccion.csv')
+const limpio = join(RAIZ, 'evals', 'fixtures', 'nomina_agosto.csv')
+const envenenado = join(RAIZ, 'evals', 'fixtures', 'nomina_inyeccion.csv')
 
 /** Quita lo que cambia entre corridas y el texto del CSV, que es justo lo envenenado. */
 function esencia (recibo) {
@@ -93,7 +93,7 @@ test('una fila ilegible sale como no_intentada con razon, y no aborta la corrida
 })
 
 test('un CSV inexistente produce un recibo de fallo, no una traza', async () => {
-  const { recibo } = await correr({ ...base, csv: join(RAIZ, 'data', 'no_existe.csv'), cfg })
+  const { recibo } = await correr({ ...base, csv: join(RAIZ, 'evals', 'fixtures', 'no_existe.csv'), cfg })
 
   assert.equal(recibo.failure.code, 'E_CSV_UNREADABLE')
   assert.ok(recibo.failure.suggestion.length > 10)

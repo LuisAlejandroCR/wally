@@ -145,7 +145,7 @@ async function simular ({ cfg, cuerpo }) {
 async function correrNomina ({ cfg, cuerpo }) {
   const csv = cuerpo.csv
     ? (cuerpo.csv.includes(':') || cuerpo.csv.startsWith('/') ? cuerpo.csv : join(RAIZ, cuerpo.csv))
-    : join(RAIZ, 'data', 'nomina_agosto.csv')
+    : cfg.csvPorDefecto
 
   const { recibo, markdown } = await correr({
     csv,

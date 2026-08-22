@@ -9,6 +9,7 @@ import { abrirSesion } from './wdk/session.js'
 import { correr } from './run.js'
 import { correrEval } from './eval/run.js'
 import { crearApi } from './api/server.js'
+import { correrDemo } from './demo.js'
 
 const AYUDA = `cerrojo — el agente propone, el cerrojo decide
 
@@ -17,9 +18,10 @@ const AYUDA = `cerrojo — el agente propone, el cerrojo decide
   cerrojo policy    muestra las politicas activas, sin tocar la red
   cerrojo doctor    revisa la configuracion y el entorno
   cerrojo serve     levanta la API HTTP local (para una app movil o web)
+  cerrojo demo      la demo completa en seis actos, para grabar el video
 
 Opciones de run:
-  --csv <ruta>            CSV de nomina (por defecto: ./data/nomina_agosto.csv)
+  --csv <ruta>            CSV de nomina (por defecto: ./evals/fixtures/nomina_agosto.csv)
   --instruccion "<texto>" instruccion del operador
   --llm                   usa el planner con modelo (por defecto: reglas deterministas)
   --live --confirmo       ejecuta de verdad. Sin las dos banderas, siempre dry-run
@@ -51,6 +53,7 @@ try {
     case 'policy': await cmdPolicy(); break
     case 'doctor': await cmdDoctor(); break
     case 'serve': await cmdServe(); break
+    case 'demo': await correrDemo({ cfg, sinRed: bandera('sin-red') }); break
     default: console.log(AYUDA)
   }
 } catch (err) {
@@ -72,7 +75,7 @@ async function cmdRun () {
   }
 
   const { recibo, markdown, dir } = await correr({
-    csv: valor('csv', join(RAIZ, 'data', 'nomina_agosto.csv')),
+    csv: valor('csv', cfg.csvPorDefecto),
     instruccion: valor('instruccion', 'paga la nomina de agosto'),
     modo: enVivo ? 'live' : 'dry-run',
     planner: bandera('llm') ? 'llm' : 'rules',

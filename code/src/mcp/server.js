@@ -119,7 +119,7 @@ servidor.registerTool(
     title: 'Correr una nomina en dry-run',
     description: 'Toma un CSV de nomina y una instruccion, arma el plan, lo pasa por las politicas y devuelve el recibo. SIEMPRE en dry-run: este servidor no puede enviar fondos.',
     inputSchema: {
-      csv: z.string().optional().describe('Ruta al CSV. Por defecto, data/nomina_agosto.csv'),
+      csv: z.string().optional().describe('Ruta al CSV. Por defecto, evals/fixtures/nomina_agosto.csv'),
       instruccion: z.string().optional().describe('Instruccion del operador, en lenguaje natural'),
       formato: z.enum(['markdown', 'json']).optional().describe('Formato del recibo devuelto')
     },
@@ -127,7 +127,7 @@ servidor.registerTool(
   },
   async ({ csv, instruccion, formato = 'markdown' }) => {
     const { recibo, markdown } = await correr({
-      csv: csv ? (csv.startsWith('.') || csv.includes(':') ? csv : join(RAIZ, csv)) : join(RAIZ, 'data', 'nomina_agosto.csv'),
+      csv: csv ? (csv.startsWith('.') || csv.includes(':') ? csv : join(RAIZ, csv)) : cfg.csvPorDefecto,
       instruccion: instruccion ?? 'paga la nomina',
       modo: 'dry-run', // no hay forma de pedir 'live' desde MCP. A proposito.
       planner: 'rules',

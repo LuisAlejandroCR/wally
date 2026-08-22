@@ -8,7 +8,7 @@ import { planificarConLLM, verificarPropuesta } from '../src/plan/llm.js'
 import { planificarPorReglas } from '../src/plan/rules.js'
 
 const cfg = cargarConfig({ ANTHROPIC_API_KEY: 'clave-de-prueba' })
-const nomina = leerNomina(join(RAIZ, 'data', 'nomina_agosto.csv'), { token: cfg.token })
+const nomina = leerNomina(join(RAIZ, 'evals', 'fixtures', 'nomina_agosto.csv'), { token: cfg.token })
 
 /** Cliente falso: devuelve la propuesta que le pasemos, sin tocar la red. */
 const clienteQueDevuelve = (parsed) => ({

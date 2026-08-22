@@ -41,7 +41,10 @@ export function cargarConfig (overrides = {}) {
     },
     capTx: entero(env.CERROJO_CAP_TX, '500000000'),
     capDay: entero(env.CERROJO_CAP_DAY, '1500000000'),
-    allowlistPath: ruta(env.CERROJO_ALLOWLIST, './data/allowlist.txt'),
+    allowlistPath: ruta(env.CERROJO_ALLOWLIST, './evals/fixtures/allowlist.txt'),
+    // Los CSV de ejemplo viven en evals/fixtures/ y SI estan en el repo: son sinteticos y
+    // hacen reproducible el eval. code/data/ queda para nominas reales, y esta gitignorado.
+    csvPorDefecto: ruta(env.CERROJO_CSV, './evals/fixtures/nomina_agosto.csv'),
     demo: {
       network: env.CERROJO_DEMO_NETWORK ?? 'polygon',
       rpcUrl: env.CERROJO_DEMO_RPC_URL ?? 'https://polygon-bor-rpc.publicnode.com',

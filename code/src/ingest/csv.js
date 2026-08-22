@@ -7,7 +7,8 @@ import { normalizarMonto } from './amount.js'
 export const PROBLEMAS_FILA = {
   DIRECCION_INVALIDA: 'direccion_invalida',
   MONEDA_NO_SOPORTADA: 'moneda_no_soportada',
-  COLUMNAS_FALTANTES: 'columnas_faltantes'
+  COLUMNAS_FALTANTES: 'columnas_faltantes',
+  FILA_DUPLICADA: 'fila_duplicada'
 }
 
 const CABECERA = ['beneficiario', 'direccion', 'monto', 'moneda', 'concepto']
@@ -58,7 +59,10 @@ export function leerNomina (rutaArchivo, { token }) {
   }
 
   const sha256 = createHash('sha256').update(texto).digest('hex')
-  const filas = parsearCSV(texto)
+
+  // Excel en Windows guarda con BOM. Sin quitarlo, la primera columna se llama
+  // "﻿beneficiario" y el archivo entero se rechaza por cabecera invalida.
+  const filas = parsearCSV(texto.charCodeAt(0) === 0xFEFF ? texto.slice(1) : texto)
 
   if (filas.length === 0) throw E.csvIlegible(rutaArchivo, 'el archivo esta vacio')
 
@@ -111,5 +115,36 @@ export function leerNomina (rutaArchivo, { token }) {
     return linea
   })
 
+  marcarDuplicadas(lineas)
+
   return { lineas, sha256, ruta: rutaArchivo }
+}
+
+/**
+ * Marca las filas exactamente repetidas (mismo destinatario, mismo monto, mismo
+ * concepto). La segunda no se paga: sale como `no_intentada` con su razon.
+ *
+ * Un CSV pegado dos veces es el error de nomina mas comun y el mas caro. Pagarlo
+ * "porque el archivo lo decia" es justo lo que este proyecto no hace; abstenerse
+ * y decir por que deja la decision en manos de una persona.
+ */
+function marcarDuplicadas (lineas) {
+  const vistas = new Map()
+
+  for (const linea of lineas) {
+    if (linea.problema) continue
+
+    const clave = `${linea.direccion.toLowerCase()}|${linea.amount}|${linea.concepto.trim().toLowerCase()}`
+    const primera = vistas.get(clave)
+
+    if (primera === undefined) {
+      vistas.set(clave, linea.row)
+      continue
+    }
+
+    linea.problema = {
+      codigo: PROBLEMAS_FILA.FILA_DUPLICADA,
+      why: `La fila ${linea.row} es identica a la fila ${primera} (mismo destinatario, monto y concepto). No se paga dos veces sin una confirmacion explicita.`
+    }
+  }
 }
