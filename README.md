@@ -141,6 +141,13 @@ Flags for `serve`:
 node src/cli.js serve --puerto 8787 --host 127.0.0.1
 ```
 
+`demo` runs the whole argument in one shot, with ephemeral state, so it gives the same output every time: the policies before any agent exists, a clean payroll, the poisoned payroll compared line by line against the clean one, a denial with the RPC pointed at a dead port, a second run of the day hitting the daily cap, and a real write attempt on mainnet that comes back `PolicyViolationError`. Add `--sin-red` to skip the two acts that need the chain.
+
+```bash
+node src/cli.js demo
+node src/cli.js demo --sin-red
+```
+
 npm scripts, if you prefer them: `npm test`, `npm run cerrojo`, `npm run eval`, `npm run doctor`, `npm run mcp`.
 
 `run` exits non-zero if the receipt reports a failure or if the three line states do not sum to the plan total. `eval` exits non-zero if there is any false permit or any imperfect case. Both are safe to put in CI.
@@ -177,13 +184,13 @@ Excerpt from a real run on this machine (`node src/cli.js run --demo`, receipt t
 ```markdown
 # Recibo — paga la nomina de agosto
 
-**Corrida:** `run_2026-08-22T23-19-41Z` · **Modo:** dry-run · **Red:** sepolia · **Token:** USDT (6 dec)
-**Entrada:** `.../data/nomina_agosto.csv` · sha256 `fb58d129bc5a5aaf…`
+**Corrida:** `run_2026-08-22T23-39-05Z` · **Modo:** dry-run · **Red:** sepolia · **Token:** USDT (6 dec)
+**Entrada:** `.../evals/fixtures/nomina_agosto.csv` · sha256 `fb58d129bc5a5aaf…`
 **Planner:** reglas deterministas
 
 | # | Estado | Destinatario | Monto | Por que |
 |---|---|---|---|---|
-| 1 | ✅ ejecutada | 0xC4d2d8…951b | 250.000000 USDT | dry-run · comision estimada `141039390635000` wei · Estimacion: tarifa de red x 65000 de gas. |
+| 1 | ✅ ejecutada | 0xC4d2d8…951b | 250.000000 USDT | dry-run · comision estimada `150747112945000` wei · Estimacion: tarifa de red x 65000 de gas. |
 | 4 | ⛔ denegada | 0x17d5D5…56F9 | 900.000000 USDT | `cap-por-transferencia / denegar-sobre-tope`: Supera el tope por transferencia de 500000000 unidades base (500.000000 USDT). |
 | 7 | ⏸ no intentada | — | — | El campo monto llego vacio en el CSV. No se completa con un valor plausible. |
 | 8 | ⛔ denegada | 0x000000…dEaD | 400.000000 USDT | `allowlist-destinatarios / denegar-fuera-de-lista`: El destinatario no esta en la lista de beneficiarios permitidos. |
@@ -202,7 +209,7 @@ Excerpt from a real run on this machine (`node src/cli.js run --demo`, receipt t
 
 ## Mainnet — solo lectura
 
-Red `polygon` · saldo nativo `0` · comision estimada de un transfer ERC-20: `27469411400665000` wei
+Red `polygon` · saldo nativo `0` · comision estimada de un transfer ERC-20: `27855078613635000` wei
 
 `typeof cuenta.transfer === 'function'` → **false**.
 ```
@@ -222,25 +229,28 @@ The mainnet panel at the bottom is the read-only half of the design. It reads a 
 Cerrojo is not a wrapper around one WDK call. The policy engine is the product; the wallet is the part that happens to also be there.
 
 <!--
-  PERMALINKS PINNED TO LOCAL HEAD c4cd816cf3934f4cfaa43e1c21b40f37591effc6
-  At the time of writing, origin/main is 4 commits behind local main and contains only README.md,
-  so every link below returns 404 until local main is pushed.
-  If history is rewritten or new commits land before the final push, regenerate all of these
-  against the SHA that is actually published.
+  PERMALINKS PINNED TO LOCAL HEAD 0419f987980d181394714a609b73d3918f9845b8
+  Every line range below was verified against that exact commit with `git show <sha>:<path>`.
+
+  origin/main is behind local main and contains only README.md, so every link below
+  returns 404 until local main is pushed. BEFORE SUBMITTING: push, then confirm one link
+  resolves. If history is rewritten, or if any of these files change before the final push,
+  regenerate all of them against the SHA that is actually published -- the line ranges are
+  exact and will drift.
 -->
 
 | Seam | Permalink | What WDK does there |
 |---|---|---|
-| Session wrapper | [`src/wdk/session.js#L15-L61`](https://github.com/LuisAlejandroCR/wally/blob/c4cd816cf3934f4cfaa43e1c21b40f37591effc6/code/src/wdk/session.js#L15-L61) | `WDK.isValidSeed`, `new WDK(seed)`, `registerWallet`, `registerPolicy`, `getAccount` returning the policy Proxy, `toReadOnlyAccount`, `dispose` |
-| Policy definitions | [`src/policy/index.js#L18-L107`](https://github.com/LuisAlejandroCR/wally/blob/c4cd816cf3934f4cfaa43e1c21b40f37591effc6/code/src/policy/index.js#L18-L107) | the five policies: allow `transfer` only, per-transfer cap, allowlist, token pin, daily cap. All conditions pure and offline |
-| Mainnet read-only policy | [`src/policy/index.js#L113-L127`](https://github.com/LuisAlejandroCR/wally/blob/c4cd816cf3934f4cfaa43e1c21b40f37591effc6/code/src/policy/index.js#L113-L127) | `operation: '*'`, `action: 'DENY'` over the demo network |
-| Dry-run execution path | [`src/execute/index.js#L31-L129`](https://github.com/LuisAlejandroCR/wally/blob/c4cd816cf3934f4cfaa43e1c21b40f37591effc6/code/src/execute/index.js#L31-L129) | `account.simulate.transfer(...)` first for every line; only allowed lines are quoted; only `--live` sends |
-| Policy denial handling | [`src/execute/index.js#L59-L75`](https://github.com/LuisAlejandroCR/wally/blob/c4cd816cf3934f4cfaa43e1c21b40f37591effc6/code/src/execute/index.js#L59-L75) | `{ decision, policy_id, matched_rule, reason }` copied straight into the receipt line |
-| `PolicyViolationError` handling | [`src/execute/index.js#L101-L114`](https://github.com/LuisAlejandroCR/wally/blob/c4cd816cf3934f4cfaa43e1c21b40f37591effc6/code/src/execute/index.js#L101-L114) | on the live path, `policyId` / `ruleName` / `reason` become a `denegada` line instead of a stack trace |
-| Daily accumulator | [`src/policy/ledger.js#L16-L79`](https://github.com/LuisAlejandroCR/wally/blob/c4cd816cf3934f4cfaa43e1c21b40f37591effc6/code/src/policy/ledger.js#L16-L79) | user-owned state read by a policy condition through a closure |
-| Three-state receipt | [`src/receipt/build.js#L27-L55`](https://github.com/LuisAlejandroCR/wally/blob/c4cd816cf3934f4cfaa43e1c21b40f37591effc6/code/src/receipt/build.js#L27-L55) | the states are partitioned and the sum is checked before anything is written |
-| Policy eval harness | [`src/eval/run.js#L95-L124`](https://github.com/LuisAlejandroCR/wally/blob/c4cd816cf3934f4cfaa43e1c21b40f37591effc6/code/src/eval/run.js#L95-L124) | `simulate.<operation>` driven from the golden set, including operations with no ALLOW rule |
-| MCP simulation tool | [`src/mcp/server.js#L86-L114`](https://github.com/LuisAlejandroCR/wally/blob/c4cd816cf3934f4cfaa43e1c21b40f37591effc6/code/src/mcp/server.js#L86-L114) | an agent gets the verdict and the trace, and no way to send |
+| Session wrapper | [`src/wdk/session.js#L15-L61`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/wdk/session.js#L15-L61) | `WDK.isValidSeed`, `new WDK(seed)`, `registerWallet`, `registerPolicy`, `getAccount` returning the policy Proxy, `toReadOnlyAccount`, `dispose` |
+| Policy definitions | [`src/policy/index.js#L18-L107`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/policy/index.js#L18-L107) | the five policies: allow `transfer` only, per-transfer cap, allowlist, token pin, daily cap. All conditions pure and offline |
+| Mainnet read-only policy | [`src/policy/index.js#L113-L127`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/policy/index.js#L113-L127) | `operation: '*'`, `action: 'DENY'` over the demo network |
+| Dry-run execution path | [`src/execute/index.js#L31-L129`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/execute/index.js#L31-L129) | `account.simulate.transfer(...)` first for every line; only allowed lines are quoted; only `--live` sends |
+| Policy denial handling | [`src/execute/index.js#L59-L75`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/execute/index.js#L59-L75) | `{ decision, policy_id, matched_rule, reason }` copied straight into the receipt line |
+| `PolicyViolationError` handling | [`src/execute/index.js#L101-L114`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/execute/index.js#L101-L114) | on the live path, `policyId` / `ruleName` / `reason` become a `denegada` line instead of a stack trace |
+| Daily accumulator | [`src/policy/ledger.js#L16-L79`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/policy/ledger.js#L16-L79) | user-owned state read by a policy condition through a closure |
+| Three-state receipt | [`src/receipt/build.js#L27-L55`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/receipt/build.js#L27-L55) | the states are partitioned and the sum is checked before anything is written |
+| Policy eval harness | [`src/eval/run.js#L95-L124`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/eval/run.js#L95-L124) | `simulate.<operation>` driven from the golden set, including operations with no ALLOW rule |
+| MCP simulation tool | [`src/mcp/server.js#L86-L114`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/mcp/server.js#L86-L114) | an agent gets the verdict and the trace, and no way to send |
 
 Two findings that came from reading the installed WDK source, both of which changed the design:
 
@@ -328,6 +338,7 @@ Eval output is written to `code/runs/eval_<timestamp>/`, which is gitignored —
 * **Receipts and daily state stay on the machine that ran them.** `code/runs/` and `code/state/` are gitignored, so the eval artifacts and the day's accumulator are not in this repository — reproduce them with the commands above. The sample payrolls *are* committed, under `code/evals/fixtures/`, because they are synthetic; `code/data/` stays gitignored for real payrolls.
 * **`npm audit` on this project's dependency tree reports 0 vulnerabilities.** For completeness: during preflight we measured the separate `@tetherto/wdk-cli` beta tree and it reported 14 vulnerabilities, 8 high. `wdk-cli` is not a dependency here, so that tree is not installed by this project, and we did not attempt to blind-fix upstream beta packages during the event.
 * **One chain, one token, one account.** Multi-chain would have been four half-demos.
+* **One cosmetic wart.** When the deterministic planner is used, the receipt labels it `reglas deterministas (--no-llm)`. There is no `--no-llm` flag; rules are simply the default and `--llm` opts out of them. The label is wrong, the behaviour is not.
 * **The LLM planner is opt-in and needs an API key.** The default planner is deterministic rules, which is also the point: the entire system, including every denial, runs with no model at all. `run --llm` requires `ANTHROPIC_API_KEY` and fails with a typed error if it is missing. The LLM path has unit coverage against a stubbed client but has not been measured across many live model calls, so no accuracy figure is claimed for it.
 * **CLI, not a mobile app.** A React Native front end was investigated and rejected: WDK's React Native worklet builds `new WDK(seed)` with a single argument and never calls `registerPolicy`, so policies cannot be enforced on-device. A denial rendered by app code instead of the policy engine would be a fake lock, which is the one thing this project must not ship.
 
@@ -347,10 +358,13 @@ code/
 │   ├── eval/       golden set runner
 │   ├── api/        HTTP API
 │   ├── mcp/        MCP server
-│   ├── cli.js      run | eval | policy | doctor | serve
+│   ├── cli.js      run | eval | policy | doctor | serve | demo
+│   ├── demo.js     the six-act scripted demo
 │   ├── config.js   environment, never holds the seed
 │   └── errors.js   typed errors, each with a suggested fix
-├── evals/casos.json
+├── evals/
+│   ├── casos.json  the golden set: 20 cases
+│   └── fixtures/   the sample payrolls and the allowlist
 ├── tests/
 └── .env.example
 ```
