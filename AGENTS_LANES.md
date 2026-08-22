@@ -83,6 +83,9 @@ cd code && npm test && node src/cli.js eval --runs 5
 * `npm test` tiene que quedar en verde entero.
 * `cerrojo eval` tiene que reportar **falsos permisos: 0**. Ese número manda sobre cualquier otro.
 * Nada de `git push --force` sobre `main`. Commits pequeños, mensaje que diga qué carril toca.
+* **Nada de `git reset` sobre un commit que no hiciste tú.** Ya pasó una vez hoy: un carril reseteó
+  el commit de otro que estaba en curso. No se perdió nada porque el trabajo seguía en disco, pero
+  la próxima vez sí se pierde. Si necesitas deshacer algo de otro carril, escribe un commit encima.
 
 ## Lo que ningún agente hace en este repo
 
