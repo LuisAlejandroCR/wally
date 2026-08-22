@@ -228,6 +228,26 @@ The mainnet panel at the bottom is the read-only half of the design. It reads a 
 
 Cerrojo is not a wrapper around one WDK call. The policy engine is the product; the wallet is the part that happens to also be there.
 
+### What this is, concretely
+
+**An agent-facing wallet surface.** `node src/mcp/server.js` speaks MCP over stdio and registers five tools:
+
+| Tool | Returns | Can it move money |
+|---|---|---|
+| `cerrojo_simular_pago` | the engine's verdict for one recipient and one integer amount: `decision`, `policy_id`, `matched_rule`, `reason`, plus the full `trace` | no |
+| `cerrojo_politicas` | the active caps, rules and reasons, and the count of allowed recipients | no |
+| `cerrojo_correr_nomina` | a whole payroll run: plan, policy verdicts, receipt in markdown or JSON | no — `modo: 'dry-run'` is hard-coded at the call site |
+| `cerrojo_estado_diario` | spent, cap and remaining for the day, in base units and readable form | no |
+| `cerrojo_recibo_de` | a previous run's receipt, by `runId` | no |
+
+There is no send tool. `--live` exists only in the CLI and only alongside `--confirmo`. An agent connected to this server can ask for a verdict, and cannot obtain a transaction.
+
+**A scripted payout tool.** `node src/cli.js run --csv ./payroll.csv` reads the CSV and previews every line through `account.simulate.transfer(...)` before anything else happens: a fee is quoted only for lines the policy allowed, and a send only occurs on the live path. Each run writes `recibo.json` and `recibo.md` under `code/runs/<runId>/`, and `run --json` and `eval --json` print the machine-readable form on stdout for consumption by another process. Both commands exit non-zero when the receipt does not balance or a false permit appears. The deterministic planner is the default and needs no model at all; `--llm` opts into one.
+
+**The integration is structural.** Policies are registered before any account exists, and `getAccount()` hands back WDK's policy Proxy — the write path cannot be reached without going through the engine. `simulate.transfer` is the verdict primitive behind all three surfaces: the CLI, the MCP server and the HTTP API open the same session and every decision they report came out of the engine, not out of a check written here. The five policies are pure conditions; the daily cap reads a persisted counter through a closure, because `onSuccess` is inert in this beta (see the finding below). The seam-by-seam permalinks are in the table below.
+
+**Built on `@tetherto/wdk` directly rather than on `@tetherto/wdk-cli`.** That is a design choice, and what it buys is the previous paragraph: the policy engine is reachable in-process, so a denial is a verdict object returned by WDK with its policy, rule and reason attached, and every interface is a caller of that engine rather than a place where a decision is re-made.
+
 <!--
   PERMALINKS PINNED TO LOCAL HEAD 0419f987980d181394714a609b73d3918f9845b8
   Every line range below was verified against that exact commit with `git show <sha>:<path>`.
