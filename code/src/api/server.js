@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { RAIZ, cargarAllowlist, cargarConfig, leerSeed } from '../config.js'
+import { CerrojoError } from '../errors.js'
 import { formatearMonto } from '../ingest/amount.js'
 import { construirPoliticas } from '../policy/index.js'
 import { LedgerDiario } from '../policy/ledger.js'
@@ -118,6 +119,19 @@ async function estadoDiario ({ cfg }) {
 }
 
 async function simular ({ cfg, cuerpo }) {
+  // Entrada validada antes de tocar nada: un monto ilegible es un error del
+  // llamante, no un 500 nuestro.
+  const destinatario = String(cuerpo.destinatario ?? '')
+  const montoBase = String(cuerpo.monto_base ?? '')
+
+  if (!/^0x[0-9a-fA-F]{40}$/.test(destinatario)) {
+    throw new CerrojoError('E_DESTINATARIO_INVALIDO', `"${destinatario}" no tiene la forma de una direccion EVM.`, 'Envia destinatario como 0x seguido de 40 caracteres hexadecimales.', 'api')
+  }
+
+  if (!/^\d+$/.test(montoBase)) {
+    throw new CerrojoError('E_MONTO_INVALIDO', `"${montoBase}" no es un entero en unidades base.`, `Envia monto_base como entero en unidades base: con ${cfg.token.decimals} decimales, 250 ${cfg.token.symbol} son "250000000".`, 'api')
+  }
+
   const allowlist = cargarAllowlist(cfg.allowlistPath)
   const ledger = new LedgerDiario({ dir: cfg.dirEstado, network: cfg.network })
   const sesion = await abrirSesion({ seed: leerSeed(), cfg, ledger, allowlist })
@@ -125,8 +139,8 @@ async function simular ({ cfg, cuerpo }) {
   try {
     const verdicto = await sesion.cuenta.simulate.transfer({
       token: cuerpo.token ?? cfg.token.address,
-      recipient: String(cuerpo.destinatario ?? ''),
-      amount: BigInt(cuerpo.monto_base ?? '0')
+      recipient: destinatario,
+      amount: BigInt(montoBase)
     })
 
     return {
@@ -134,7 +148,7 @@ async function simular ({ cfg, cuerpo }) {
       politica: verdicto.policy_id,
       regla: verdicto.matched_rule,
       razon: verdicto.reason,
-      monto: { base: String(cuerpo.monto_base ?? '0'), legible: formatearMonto(cuerpo.monto_base ?? '0', cfg.token.decimals) },
+      monto: { base: montoBase, legible: formatearMonto(montoBase, cfg.token.decimals) },
       traza: verdicto.trace
     }
   } finally {

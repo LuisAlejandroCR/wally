@@ -300,12 +300,13 @@ cd code
 npm test
 ```
 
-27 tests across four files, all offline. They generate their own in-memory seed, point the RPC at a dead port, and write nothing to disk.
+Five test files, all offline. They generate their own in-memory seed, point the RPC at a dead port, and keep their state out of the way of a real run.
 
 * `tests/policy.test.js` — the Proxy is in place; each of the five policies allows and denies correctly with the RPC dead; `sendTransaction` and `approve` are default-denied; a denied live `transfer` throws `PolicyViolationError` carrying `policyId`.
 * `tests/recibo.test.js` — the three states sum to the total; every denial carries policy, rule and reason; **the poisoned CSV produces a receipt identical to the clean one**; a missing CSV yields a failure receipt rather than a stack trace; no receipt ever contains a seed word or anything shaped like a private key.
 * `tests/mcp.test.js` — over a real stdio MCP transport: no tool name suggests sending, an agent cannot pay off the allowlist, an agent cannot exceed the cap, and `cerrojo_politicas` leaks no secret.
 * `tests/planner.test.js` — the LLM's proposal is re-checked row by row against the CSV; a rewritten amount or address becomes an abstention, never a silent correction.
+* `tests/cli.test.js` — spawns the real CLI: `--live` without `--confirmo` exits 1 and pays nothing, `run --json` emits a receipt that parses and balances, `policy` works with no seed and no network, a missing CSV exits 1 with a typed code and no stack trace, and a bare invocation prints the help.
 
 The eval is the number:
 

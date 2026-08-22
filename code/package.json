@@ -8,7 +8,9 @@
     "cerrojo": "node src/cli.js",
     "mcp": "node src/mcp/server.js",
     "eval": "node src/cli.js eval",
-    "doctor": "node src/cli.js doctor"
+    "doctor": "node src/cli.js doctor",
+    "demo": "node src/cli.js demo",
+    "serve": "node src/cli.js serve"
   },
   "keywords": [],
   "author": "",
@@ -24,5 +26,8 @@
   "bin": {
     "cerrojo": "src/cli.js",
     "cerrojo-mcp": "src/mcp/server.js"
+  },
+  "engines": {
+    "node": ">=22.18.0"
   }
 }
