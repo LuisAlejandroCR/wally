@@ -1,0 +1,17 @@
+# --- privado: nunca al repo publico ---
+AGENTS.md
+CLAUDE.md
+/docs
+/knowledge-base
+.env
+.env.*
+!.env.example
+
+# --- datos y salidas ---
+code/data/
+code/runs/
+code/state/
+
+# --- node ---
+node_modules/
+npm-debug.log*

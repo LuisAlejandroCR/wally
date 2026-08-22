@@ -1,0 +1,18 @@
+{
+  "name": "cerrojo",
+  "version": "0.1.0",
+  "description": "El agente propone, el cerrojo decide. Policy-gated payment agent built on Tether WDK.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "cerrojo": "node src/cli.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "type": "module",
+  "dependencies": {
+    "@tetherto/wdk": "^1.0.0-beta.16",
+    "@tetherto/wdk-wallet-evm": "^1.0.0-beta.17"
+  }
+}
