@@ -39,6 +39,9 @@ export async function abrirSesion ({ seed, cfg, ledger, allowlist, conDemo = fal
   const cuenta = await wdk.getAccount(cfg.network, 0)
   const tesoreria = await cuenta.getAddress()
 
+  // Copia de solo lectura de la misma cuenta: sirve para cotizar sin exponer escrituras.
+  const cuentaSoloLectura = await cuenta.toReadOnlyAccount()
+
   let demo = null
   if (conDemo) {
     // Cerrojo estructural: en este objeto el metodo de enviar no existe.
@@ -49,6 +52,7 @@ export async function abrirSesion ({ seed, cfg, ledger, allowlist, conDemo = fal
   return {
     wdk,
     cuenta,
+    cuentaSoloLectura,
     tesoreria,
     demo,
     politicas: politicas.map((p) => ({ id: p.id, name: p.name, scope: p.scope, wallet: p.wallet })),

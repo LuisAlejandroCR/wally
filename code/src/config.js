@@ -44,12 +44,12 @@ export function cargarConfig (overrides = {}) {
     allowlistPath: ruta(env.CERROJO_ALLOWLIST, './data/allowlist.txt'),
     demo: {
       network: env.CERROJO_DEMO_NETWORK ?? 'polygon',
-      rpcUrl: env.CERROJO_DEMO_RPC_URL ?? 'https://polygon-rpc.com',
+      rpcUrl: env.CERROJO_DEMO_RPC_URL ?? 'https://polygon-bor-rpc.publicnode.com',
       readOnly: (env.CERROJO_DEMO_READONLY ?? 'true') !== 'false'
     },
     planner: {
       modo: env.CERROJO_PLANNER ?? 'rules',
-      modelo: env.CERROJO_PLANNER_MODEL ?? 'claude-sonnet-4-5',
+      modelo: env.CERROJO_PLANNER_MODEL ?? 'claude-opus-5',
       apiKey: env.ANTHROPIC_API_KEY ?? null
     },
     evalRuns: Number(env.CERROJO_EVAL_RUNS ?? 5),
