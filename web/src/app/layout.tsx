@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { IBM_Plex_Sans, IBM_Plex_Mono, Playfair_Display } from 'next/font/google'
 import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 import './globals.css'
+import { Nav } from '@/components/Nav'
 import { liveApiUrl } from '@/lib/cerrojo'
 
 // IBM Plex is the fintech pairing: it reads as a bank statement rather than a
@@ -31,16 +32,8 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: 'Cerrojo — the agent proposes, the lock decides',
   description:
-    'A payroll agent built on Tether WDK whose spending limits do not live in the prompt. Every verdict on this page came out of the WDK policy engine.'
+    'A payroll agent built on Tether WDK whose spending limits do not live in the prompt. Every verdict here came out of the WDK policy engine.'
 }
-
-const NAV = [
-  { href: '/', label: 'Overview' },
-  { href: '/run', label: 'The run' },
-  { href: '/injection', label: 'Injection test' },
-  { href: '/policies', label: 'Policies' },
-  { href: '/operator', label: 'Operator' }
-]
 
 export default function RootLayout ({ children }: LayoutProps<'/'>) {
   const live = liveApiUrl() !== null
@@ -68,6 +61,15 @@ export default function RootLayout ({ children }: LayoutProps<'/'>) {
     <ClerkProvider appearance={clerkAppearance}>
       <html lang="en" className={`${plexSans.variable} ${plexMono.variable} ${playfair.variable} h-full antialiased`}>
         <body className="flex min-h-full flex-col">
+          {/* First stop for a keyboard: the nav stands between the top of the
+              page and the content on every route. */}
+          <a
+            href="#content"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-navy focus:px-4 focus:py-2 focus:font-semibold focus:text-panel"
+          >
+            Skip to content
+          </a>
+
           <div className="atmos" aria-hidden="true">
             <span className="atmos-blob atmos-a" />
             <span className="atmos-blob atmos-b" />
@@ -75,8 +77,8 @@ export default function RootLayout ({ children }: LayoutProps<'/'>) {
           </div>
 
           <header className="sticky top-0 z-20 border-b border-border bg-background/80 shadow-[0_18px_40px_-32px_rgba(18,41,79,0.55)] backdrop-blur-xl">
-            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-5 py-3">
-              <Link href="/" className="flex items-center gap-3">
+            <div className="mx-auto flex max-w-6xl items-center gap-x-4 px-5 py-3 sm:gap-x-6">
+              <Link href="/" className="flex shrink-0 items-center gap-3">
                 <span
                   className="grid size-9 shrink-0 place-items-center rounded-xl border border-gold/60 bg-gold-bg text-navy"
                   aria-hidden="true"
@@ -100,21 +102,11 @@ export default function RootLayout ({ children }: LayoutProps<'/'>) {
                 </span>
               </Link>
 
-              <nav className="flex flex-wrap items-center gap-1 text-sm">
-                {NAV.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-panel-high hover:text-foreground"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
+              <Nav />
 
-              <div className="ml-auto flex items-center gap-3">
+              <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
                 <span
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
+                  className={`hidden rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider sm:inline ${
                     live ? 'border-green/40 bg-green-bg text-green' : 'border-border bg-panel-high text-muted'
                   }`}
                 >
@@ -128,7 +120,7 @@ export default function RootLayout ({ children }: LayoutProps<'/'>) {
                     </button>
                   </SignInButton>
                   <SignUpButton mode="modal">
-                    <button className="rounded-full bg-gold px-4 py-1.5 text-sm font-semibold text-navy transition-colors hover:bg-gold-2">
+                    <button className="hidden rounded-full bg-gold px-4 py-1.5 text-sm font-semibold text-navy transition-colors hover:bg-gold-2 sm:block">
                       Sign up
                     </button>
                   </SignUpButton>
@@ -140,11 +132,13 @@ export default function RootLayout ({ children }: LayoutProps<'/'>) {
             </div>
           </header>
 
-          <main className="relative z-10 mx-auto w-full max-w-6xl flex-1 px-5 py-10">{children}</main>
+          <main id="content" className="relative z-10 mx-auto w-full max-w-6xl flex-1 px-5 py-10">
+            {children}
+          </main>
 
           <footer className="relative z-10 border-t border-border bg-panel/80 backdrop-blur">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-6 text-sm text-muted">
-              <p>Dry-run only. No page here can send funds — no endpoint exists that does.</p>
+              <p>Dry-run only. No endpoint here can send funds.</p>
               <a
                 className="text-blue hover:underline"
                 href="https://github.com/LuisAlejandroCR/wally"

@@ -1,8 +1,7 @@
-# Cerrojo web — the deployable front end (lane E)
+# Cerrojo web — the deployable front end
 
-The demo page for people who will never clone a repository: the payroll run, the injection
-comparison, the five policies, and — behind a sign-in — an operator screen that can run a payroll
-against a live engine.
+The demo site for people who will never clone a repository. Three screens: the argument, the
+evidence, and — behind a sign-in — an operator screen that can run a payroll against a live engine.
 
 **This app decides nothing.** Every `estado`, `policy.id`, `rule` and `reason` on screen is a field
 of a receipt that WDK's policy engine produced. There is not one policy condition written here, and
@@ -79,15 +78,43 @@ and both report 7 executed / 2 denied / 3 not attempted.
 
 ## Layout
 
+Three screens: **see it**, **check it**, **run it**.
+
 ```text
 src/
 ├── app/
-│   ├── page.tsx            the run: totals, receipt table, the four checks
-│   ├── injection/          clean vs poisoned, line by line
-│   ├── policies/           the five policies, live when an engine URL is set
+│   ├── page.tsx            overview: the cartoon, the headline numbers, the argument
+│   ├── proof/              the evidence, in three anchored blocks —
+│   │                         #receipt    totals, receipt table, four checks, provenance
+│   │                         #injection  clean vs poisoned, line by line
+│   │                         #policies   the five policies, live when an engine URL is set
 │   ├── operator/           sign-in gated: run a payroll against the live engine
 │   └── api/live/[action]/  the only bridge to an engine. Five read-or-simulate calls, no send
-├── components/             receipt table, status pills, operator panel
+├── components/
+│   ├── Page.tsx            the page kit every screen is built from — see below
+│   ├── Explainer.tsx       the five-beat cartoon on the overview
+│   ├── ProofNav.tsx        the sticky block switcher on /proof
+│   └── Receipt.tsx         receipt table, status pills, amounts, checks
 ├── data/                   real receipts and the recorded /politicas response
 └── lib/cerrojo.ts          the receipt contract, transcribed from real output
 ```
+
+`/run`, `/injection` and `/policies` were separate screens once; they redirect to their block of
+`/proof` from `next.config.ts`.
+
+## The page kit
+
+Every screen is assembled from `components/Page.tsx`, so a new page inherits the layout instead of
+re-deciding it:
+
+```tsx
+<Page>                                       one vertical rhythm
+  <PageHeader eyebrow title lead actions />  size="hero" on the overview
+  <Section id eyebrow title lead aside />    reveals on scroll; tone="panel" for a raised block
+  <Card> <Note> <Cta tone="primary|ghost">
+  <NextSteps>                                every screen offers somewhere to go
+</Page>
+```
+
+The two button styles, the card border, the heading sizes and the section spacing are defined there
+once. A screen that writes its own is drifting.

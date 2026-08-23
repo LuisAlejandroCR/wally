@@ -14,9 +14,8 @@ import { checkDetailEn, checkLabelEn, quoteNoteEn, reasonEn, ruleNameEn, whyEn }
 export function DryRunNote ({ network }: { network: string }) {
   return (
     <p className="text-sm text-muted">
-      <span className="text-foreground">Dry run.</span> Nothing was broadcast on {network}, and the payroll rows are
-      synthetic addresses, so none of them exists on a block explorer — click one to copy it instead. The token
-      contract below is the real deployment.
+      <span className="text-foreground">Dry run on {network}.</span> Recipients are synthetic, so no explorer has
+      them — click one to copy. The token contract is real.
     </p>
   )
 }
@@ -128,12 +127,13 @@ export function Totals ({ receipt }: { receipt: Receipt }) {
 
 /**
  * The engine writes its reasons in Spanish. The English rendering is shown
- * first, and the engine's own sentence stays underneath, marked as verbatim —
- * so the page reads in English without any verdict being restated.
+ * first; the engine's own sentence sits underneath, marked verbatim, behind the
+ * toggle in the proof strip — so the page reads in English without any verdict
+ * being restated, and without printing every reason twice by default.
  */
 function Verbatim ({ text }: { text: string }) {
   return (
-    <span className="mt-1 block text-xs text-muted">
+    <span className="verbatim mt-1 block text-xs text-muted">
       <span className="uppercase tracking-wider">verbatim:</span> <span lang="es">{text}</span>
     </span>
   )
@@ -219,8 +219,8 @@ export function FeeNote ({ receipt }: { receipt: Receipt }) {
   const english = quoteNoteEn(line.quoteNota)
   return (
     <p className="text-sm text-muted">
-      <span className="text-amber">Fees are estimates.</span> {english ?? line.quoteNota} Amounts show two decimals;
-      hover for the exact figure.
+      <span className="text-amber">Fees are estimates.</span> {english ?? line.quoteNota} Hover an amount for its
+      exact figure.
     </p>
   )
 }

@@ -173,6 +173,23 @@ in a minute:
 option, so no caller can drop it.
 
 
+### Every WDK seam, line by line
+
+<!-- Permalinks are pinned to 0419f987980d181394714a609b73d3918f9845b8, an ancestor of main, and all ten line ranges were verified against the file contents at that SHA. -->
+
+| Permalink | What WDK does there |
+|---|---|
+| [`src/wdk/session.js#L15-L61`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/wdk/session.js#L15-L61) | `isValidSeed`, `new WDK(seed)`, `registerWallet`, `registerPolicy`, `getAccount` → the policy Proxy, `toReadOnlyAccount` |
+| [`src/policy/index.js#L18-L107`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/policy/index.js#L18-L107) | the five policies: `transfer` only, per-transfer cap, allowlist, token pin, daily cap — pure and offline |
+| [`src/policy/index.js#L113-L127`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/policy/index.js#L113-L127) | mainnet read-only: `operation: '*'`, `action: 'DENY'` |
+| [`src/execute/index.js#L31-L129`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/execute/index.js#L31-L129) | `simulate.transfer(...)` for every line; only allowed lines quoted; only `--live` sends |
+| [`src/execute/index.js#L59-L75`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/execute/index.js#L59-L75) | `{ decision, policy_id, matched_rule, reason }` copied into the receipt line |
+| [`src/execute/index.js#L101-L114`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/execute/index.js#L101-L114) | live path: `PolicyViolationError` becomes a `denegada` line, not a stack trace |
+| [`src/policy/ledger.js#L16-L79`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/policy/ledger.js#L16-L79) | the daily accumulator: user-owned state read by a condition through a closure |
+| [`src/receipt/build.js#L27-L55`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/receipt/build.js#L27-L55) | the three states partitioned, the sum checked before anything is written |
+| [`src/eval/run.js#L95-L124`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/eval/run.js#L95-L124) | `simulate.<operation>` from the golden set, including ops with no ALLOW rule |
+| [`src/mcp/server.js#L86-L114`](https://github.com/LuisAlejandroCR/wally/blob/0419f987980d181394714a609b73d3918f9845b8/code/src/mcp/server.js#L86-L114) | an agent gets the verdict and the trace, and no way to send |
+
 ### The `wdk-cli` seam, line by line
 
 <!-- Pinned to fba241bd54ef7d2cfeccb82c95e4a86d836be371; all nine line ranges were verified against the file contents at that SHA. -->
@@ -202,8 +219,25 @@ Both changed the design.
    without executing and without touching the network. That is the dry-run primitive the whole
    project is built on.
 
-The permalink table for every seam, and the package versions, are in the
-[README](README.md#wdk-integration).
+The summary of all of this, without the tables, is in the [README](README.md#wdk-integration).
+
+### Packages and versions
+
+Requested in `code/package.json`, resolved in `code/package-lock.json`:
+
+| Package | Requested | Resolved | Imported by `code/src/` |
+|---|---|---|---|
+| `@tetherto/wdk` | `^1.0.0-beta.16` | `1.0.0-beta.16` | yes — `wdk/session.js`, `eval/run.js` |
+| `@tetherto/wdk-wallet-evm` | `^1.0.0-beta.17` | `1.0.0-beta.17` | yes — `wdk/session.js` |
+| `@tetherto/wdk-cli` | `^1.0.0-beta.3` | `1.0.0-beta.3` | yes — spawned by `wdk/cli.js` |
+| `@tetherto/wdk-wallet` | transitive | `1.0.0-beta.17` | no |
+| `@tetherto/wdk-failover-provider` | transitive | `1.0.0-beta.2` | no |
+| `@modelcontextprotocol/sdk` | `^1.30.0` | `1.30.0` | yes — `mcp/server.js` |
+| `@anthropic-ai/sdk` | `^0.120.0` | `0.120.0` | yes — `plan/llm.js` |
+| `zod` | `^4.4.3` | `4.4.3` | yes — `plan/schema.js`, `mcp/server.js` |
+
+Those are all of them. No CSV library, no HTTP framework, no test runner: the parser, the API and
+the tests use Node's standard library.
 
 ---
 

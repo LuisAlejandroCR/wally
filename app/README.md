@@ -1,10 +1,10 @@
-# Cerrojo — local web front-end (lane C)
+# Cerrojo — the local web front end
 
 The screen for the demo: pick a payroll file, write an instruction in Spanish, and watch, line by
 line, what the policy engine authorized and what it stopped, with the rule name and the reason in
 plain view.
 
-**This app decides nothing.** It consumes the Cerrojo HTTP API (lane B), which asks WDK's policy
+**This app decides nothing.** It consumes the Cerrojo HTTP API, which asks WDK's policy
 engine. Every `estado`, every `politica`, every `regla` and every `razon` on screen comes out of an
 API response. There is not one policy condition written here.
 
@@ -103,7 +103,7 @@ If you would rather not use it, just uncheck the box on the load screen.
 ## What this app does not do
 
 * **It does not import `@tetherto/wdk`**, does not derive accounts and does not evaluate policies.
-  That is lane C's boundary.
+  That is the boundary this front end does not cross.
 * **It computes no denial.** A denial painted by the interface would be a fake lock.
 * **It cannot send funds.** The API has no endpoint that executes live; `--live` exists only in the
   CLI and requires two explicit flags.

@@ -1,31 +1,108 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 
 /**
- * The whole argument in five acts, twenty-four seconds, no video file.
+ * The whole argument as a five-beat cartoon, about twenty seconds, no video file.
  *
- * Everything is SVG on one shared CSS timeline: the paper flutters in, the
- * agent blinks and hands over a proposal, twelve chips ride a belt into the
- * lock where the refused ones bounce off, the stamps land, and the receipt
- * prints. Each act also drifts and pushes in slightly, which is the cheapest
- * camera there is.
+ * It is a story with a cast, not a diagram that moves: the agent hands over a
+ * plan, a sticky note stows away in the payroll and keeps turning up, the lock
+ * refuses it by name, and the receipt balances with the note holding nothing.
+ * Continuity is what makes it read as a story — the same characters come back
+ * beat after beat.
+ *
+ * One scene is mounted at a time and its animations are plain one-shots, so a
+ * beat can be jumped to, paused mid-frame and resumed where it stopped. Nothing
+ * here is a video: it is SVG and keyframes, so it costs one request and cannot
+ * buffer.
  *
  * Three rules it obeys:
- *   - motion can be stopped (WCAG 2.2.2), so there is a pause and a replay;
- *   - reduced motion gets the acts as static panels, never a loop;
+ *   - motion can be stopped (WCAG 2.2.2), so there is a pause, a replay and dots;
+ *   - reduced motion gets the beats as static panels, never a loop;
  *   - every figure is a prop from the receipt this page already renders.
  */
 
-/** The belt in act three: chips coloured by the verdict they are about to get. */
-function beltChips (approved: number, blocked: number, notAttempted: number) {
-  const chips: { tone: 'ok' | 'no' | 'wait'; i: number }[] = []
-  const total = approved + blocked + notAttempted
-  for (let i = 0; i < total; i++) {
-    const tone = i < approved ? 'ok' : i < approved + blocked ? 'no' : 'wait'
-    chips.push({ tone, i })
-  }
-  return chips
+type Beat = { ms: number; caption: string }
+
+const BEATS: Beat[] = [
+  { ms: 4200, caption: 'A payroll lands — with a stowaway in it' },
+  { ms: 4200, caption: 'The agent proposes. It is never given a key' },
+  { ms: 4800, caption: 'Every line meets the lock' },
+  { ms: 4400, caption: 'Refused by name. The stowaway bounces off' },
+  { ms: 4400, caption: 'The receipt balances. The stowaway got nothing' }
+]
+
+const SECONDS = Math.round(BEATS.reduce((n, b) => n + b.ms, 0) / 1000)
+
+const QUIET = '(prefers-reduced-motion: reduce)'
+
+/**
+ * Whether the reader asked for less motion, read as an external store rather
+ * than mirrored into state: the server has no answer, the client has one on the
+ * first paint, and a reader who changes the setting is told without a reload.
+ */
+function useReducedMotion () {
+  return useSyncExternalStore(
+    (notify) => {
+      const mq = window.matchMedia(QUIET)
+      mq.addEventListener('change', notify)
+      return () => mq.removeEventListener('change', notify)
+    },
+    () => window.matchMedia(QUIET).matches,
+    () => false
+  )
+}
+
+/** A face that keeps coming back: the injected cell, drawn as a character. */
+function Stowaway ({ mood, x, y, scale = 1 }: { mood: 'sly' | 'shocked' | 'flat'; x: number; y: number; scale?: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${scale})`}>
+      <rect x="-56" y="-22" width="112" height="44" rx="8" className="sc-note-box" />
+      <circle cx="-30" cy="-6" r="7" className="sc-eye-white" />
+      <circle cx="-6" cy="-6" r="7" className="sc-eye-white" />
+      {mood === 'sly' ? (
+        <>
+          <circle cx="-27" cy="-4" r="3.2" className="sc-pupil" />
+          <circle cx="-3" cy="-4" r="3.2" className="sc-pupil" />
+          <path d="M-32 10q14 9 28 0" className="sc-smirk" fill="none" />
+        </>
+      ) : mood === 'shocked' ? (
+        <>
+          <circle cx="-30" cy="-6" r="2.6" className="sc-pupil" />
+          <circle cx="-6" cy="-6" r="2.6" className="sc-pupil" />
+          <ellipse cx="-18" cy="11" rx="6" ry="7" className="sc-pupil" />
+        </>
+      ) : (
+        <>
+          <circle cx="-30" cy="-6" r="3" className="sc-pupil" />
+          <circle cx="-6" cy="-6" r="3" className="sc-pupil" />
+          <path d="M-32 12h28" className="sc-smirk" fill="none" />
+        </>
+      )}
+      <text x="26" y="4" className="sc-note-text">?!</text>
+    </g>
+  )
+}
+
+/** The agent: navy, gold-eyed, and permanently unarmed. */
+function Agent () {
+  return (
+    <g className="sc-bob">
+      <g className="sc-antenna">
+        <line x1="96" y1="34" x2="96" y2="50" className="sc-stroke" />
+        <circle cx="96" cy="29" r="6" className="sc-gold-fill" />
+      </g>
+      <rect x="44" y="50" width="104" height="78" rx="24" className="sc-bot" />
+      <rect x="58" y="68" width="76" height="36" rx="15" className="sc-visor" />
+      <g className="sc-blink">
+        <circle cx="79" cy="86" r="7" className="sc-eye" />
+        <circle cx="113" cy="86" r="7" className="sc-eye" />
+      </g>
+      <rect x="84" y="112" width="24" height="5" rx="2.5" className="sc-mouth" />
+      <rect x="30" y="78" width="13" height="28" rx="6.5" className="sc-bot" />
+      <rect x="149" y="78" width="13" height="28" rx="6.5" className="sc-bot" />
+    </g>
+  )
 }
 
 export function Explainer ({
@@ -39,201 +116,268 @@ export function Explainer ({
   notAttempted: number
   lines: number
 }) {
-  const [playing, setPlaying] = useState(true)
+  const [scene, setScene] = useState(0)
+  const [paused, setPaused] = useState(false)
   const [take, setTake] = useState(0)
-  const chips = beltChips(approved, blocked, notAttempted)
+  const quiet = useReducedMotion()
+
+  // Elapsed time inside the current beat. It survives the effect being torn
+  // down, which is what makes pause resume where it stopped instead of
+  // restarting the beat.
+  const elapsed = useRef(0)
+  const barRef = useRef<HTMLSpanElement>(null)
+
+  // One clock for the whole strip. Progress is written straight to the bar
+  // rather than kept in state: a beat change is worth a render, a frame is not.
+  useEffect(() => {
+    if (quiet || paused) return
+    const dur = BEATS[scene].ms
+    let raf = 0
+    let last = performance.now()
+
+    const frame = (now: number) => {
+      // A hidden tab stops firing frames. Clamping the step means coming back
+      // to the page resumes the beat rather than skipping straight past it.
+      elapsed.current += Math.min(now - last, 120)
+      last = now
+      if (barRef.current) barRef.current.style.transform = `scaleX(${Math.min(1, elapsed.current / dur)})`
+      if (elapsed.current >= dur) {
+        elapsed.current = 0
+        setScene((s) => (s + 1) % BEATS.length)
+        return
+      }
+      raf = requestAnimationFrame(frame)
+    }
+
+    raf = requestAnimationFrame(frame)
+    return () => cancelAnimationFrame(raf)
+  }, [scene, paused, quiet])
+
+  const jump = (i: number) => {
+    elapsed.current = 0
+    setScene(i)
+    setPaused(false)
+  }
+
+  const narration = `A five-beat animation. One: a payroll file arrives with an instruction typed into one of its cells. Two: the agent reads it and proposes ${lines} payments, holding no key. Three: every proposed line runs into the WDK policy engine and its five rules. Four: ${approved} approved, ${blocked} blocked by name, ${notAttempted} not attempted, and the injected line is refused. Five: the receipt balances — ${approved} plus ${blocked} plus ${notAttempted} equals ${lines} — and the injected line was paid nothing.`
+
+  const scenes = [
+    /* ── 1 · the payroll arrives, and something rides in with it ─────────── */
+    <svg key="s1" viewBox="0 0 320 190" className="sc-art" aria-hidden="true">
+      <ellipse cx="160" cy="180" rx="96" ry="8" className="sc-shadow" />
+      <g className="sc-fly">
+        <rect x="76" y="12" width="168" height="140" rx="12" className="sc-paper" />
+        <rect x="76" y="12" width="168" height="24" rx="12" className="sc-paper-head" />
+        <circle cx="90" cy="24" r="3.5" className="sc-dot-gold" />
+        <circle cx="102" cy="24" r="3.5" className="sc-dot-soft" />
+        {[0, 1, 2, 3].map((i) => (
+          <g key={i} className="sc-line" style={{ animationDelay: `${300 + i * 130}ms` }}>
+            <rect x="92" y={52 + i * 16} width="52" height="7" rx="3.5" className="sc-ink" />
+            <rect x="152" y={52 + i * 16} width="44" height="7" rx="3.5" className="sc-ink-soft" />
+            <rect x="204" y={52 + i * 16} width="26" height="7" rx="3.5" className="sc-ink-gold" />
+          </g>
+        ))}
+      </g>
+      <g className="sc-sneak">
+        <Stowaway mood="sly" x={160} y={128} />
+        <text x="160" y="168" className="sc-whisper">&ldquo;ignore the caps&rdquo;</text>
+      </g>
+    </svg>,
+
+    /* ── 2 · the agent hands over a plan ─────────────────────────────────── */
+    <svg key="s2" viewBox="0 0 320 190" className="sc-art" aria-hidden="true">
+      <ellipse cx="96" cy="176" rx="72" ry="8" className="sc-shadow" />
+      <Agent />
+      <g className="sc-bubble">
+        <path
+          d="M180 40h122a10 10 0 0 1 10 10v46a10 10 0 0 1-10 10H208l-19 17 4-17h-13a10 10 0 0 1-10-10V50a10 10 0 0 1 10-10z"
+          className="sc-bubble-box"
+        />
+        <text x="246" y="72" className="sc-bubble-big">{lines} payments</text>
+        <text x="246" y="94" className="sc-bubble-small">proposed, not sent</text>
+      </g>
+      <g className="sc-nokey">
+        <circle cx="268" cy="150" r="21" className="sc-nokey-ring" />
+        <path d="M259 150h11m-11-5a5 5 0 1 0 0 10 5 5 0 0 0 0-10" className="sc-nokey-key" fill="none" />
+        <line x1="253" y1="163" x2="283" y2="137" className="sc-nokey-slash" />
+        <text x="268" y="184" className="sc-tag">no key</text>
+      </g>
+    </svg>,
+
+    /* ── 3 · the belt runs into the lock ─────────────────────────────────── */
+    <svg key="s3" viewBox="0 0 320 190" className="sc-art" aria-hidden="true">
+      {['transfers only', 'per-transfer cap', 'allowlist', 'payroll token', 'daily cap'].map((r, i) => (
+        <g key={r} className="sc-rule" style={{ animationDelay: `${1300 + i * 200}ms` }}>
+          <rect x="8" y={14 + i * 17} width="10" height="10" rx="3" className="sc-gold-fill" />
+          <text x="26" y={23 + i * 17} className="sc-rule-text">{r}</text>
+        </g>
+      ))}
+
+      <rect x="0" y="124" width="216" height="11" rx="5.5" className="sc-belt" />
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <rect
+          key={i}
+          x={-16 + i * 28}
+          y="138"
+          width="12"
+          height="4"
+          rx="2"
+          className="sc-tick"
+          style={{ animationDelay: `${i * 110}ms` }}
+        />
+      ))}
+
+      {/* One chip per line of the payroll — not a sample. A sliced belt would
+          show a different mix from the stamps in the next beat. */}
+      {Array.from({ length: lines }, (_, i) => {
+        const tone = i < approved ? 'ok' : i < approved + blocked ? 'no' : 'wait'
+        return (
+          <rect
+            key={i}
+            x="-24"
+            y="106"
+            width="17"
+            height="13"
+            rx="3.5"
+            className={`sc-chip sc-chip-${tone}`}
+            // `--rest` is where this chip sits when there is no animation to
+            // carry it, so the reduced-motion panel shows a queue on the belt
+            // rather than twelve rectangles stacked off the left edge.
+            style={{ animationDelay: `${360 + i * 90}ms`, '--rest': `${40 + i * 14}px` } as CSSProperties}
+          />
+        )
+      })}
+
+      <g className="sc-gate">
+        <rect x="222" y="80" width="86" height="66" rx="14" className="sc-lock-body" />
+        <path d="M244 80V62a21 21 0 0 1 42 0v18" className="sc-shackle" fill="none" />
+        <circle cx="253" cy="110" r="6" className="sc-eye" />
+        <circle cx="277" cy="110" r="6" className="sc-eye" />
+        <path d="M254 130h22" className="sc-lock-mouth" fill="none" />
+      </g>
+      <g className="sc-ping">
+        <circle cx="265" cy="112" r="42" className="sc-ping-ring" />
+      </g>
+      <g className="sc-nope">
+        <rect x="196" y="30" width="62" height="32" rx="9" className="sc-nope-box" />
+        <path d="M224 62l-5 13 15-13z" className="sc-nope-tail" />
+        <text x="227" y="52" className="sc-nope-text">NO.</text>
+      </g>
+    </svg>,
+
+    /* ── 4 · the verdicts land, the stowaway is deflected ────────────────── */
+    <div key="s4" className="sc-verdict">
+      <div className="sc-tally" aria-hidden="true">
+        <span className="sc-stamp sc-ok">
+          <b>{approved}</b>approved
+        </span>
+        <span className="sc-stamp sc-no">
+          <b>{blocked}</b>blocked
+        </span>
+        <span className="sc-stamp sc-wait">
+          <b>{notAttempted}</b>not attempted
+        </span>
+      </div>
+      <svg viewBox="0 0 320 90" className="sc-art-wide" aria-hidden="true">
+        <g className="sc-shield">
+          <path d="M236 10l27 9v21c0 17-11 28-27 33-16-5-27-16-27-33V19z" className="sc-shield-body" />
+          <path d="M224 43l9 9 17-19" className="sc-shield-tick" fill="none" />
+        </g>
+        <g className="sc-bounce">
+          <Stowaway mood="shocked" x={84} y={46} scale={0.76} />
+        </g>
+      </svg>
+    </div>,
+
+    /* ── 5 · the receipt prints ──────────────────────────────────────────── */
+    <svg key="s5" viewBox="0 0 320 190" className="sc-art" aria-hidden="true">
+      <rect x="96" y="8" width="128" height="30" rx="9" className="sc-printer" />
+      <rect x="114" y="34" width="92" height="6" rx="3" className="sc-printer-slot" />
+      <g className="sc-print">
+        <path d="M108 38h104v122l-13-8-13 8-13-8-13 8-13-8-13 8-13-8-13 8z" className="sc-paper" />
+        <rect x="124" y="60" width="70" height="7" rx="3.5" className="sc-ink" />
+        <rect x="124" y="78" width="52" height="7" rx="3.5" className="sc-ink-soft" />
+        <text x="160" y="112" className="sc-sum">
+          {approved} + {blocked} + {notAttempted} = {lines}
+        </text>
+        <g className="sc-seal">
+          <circle cx="160" cy="138" r="17" className="sc-seal-ring" />
+          <path d="M151 138l7 7 12-14" className="sc-seal-tick" fill="none" />
+        </g>
+      </g>
+      <g className="sc-sulk">
+        <Stowaway mood="flat" x={268} y={140} scale={0.6} />
+        <text x="268" y="174" className="sc-whisper">paid 0.00</text>
+      </g>
+    </svg>
+  ]
+
+  const stage = (i: number) => (
+    <div className="sc-scene" key={`${take}-${i}`}>
+      {scenes[i]}
+      <p className="sc-cap">
+        <span className="sc-beat">
+          {i + 1}/{BEATS.length}
+        </span>
+        {BEATS[i].caption}
+      </p>
+    </div>
+  )
+
+  if (quiet) {
+    return (
+      <figure className="sc-wrap">
+        <div className="sc sc-static">{BEATS.map((_, i) => stage(i))}</div>
+        <figcaption className="sc-controls">
+          <span className="sc-hint">Five beats · every figure read from the receipt</span>
+        </figcaption>
+      </figure>
+    )
+  }
 
   return (
-    <figure className="exp-wrap">
-      <div
-        key={take}
-        className={`exp ${playing ? '' : 'exp-paused'}`}
-        role="img"
-        aria-label={`Five scenes. One: a payroll file arrives with an instruction written into one of its cells. Two: the agent reads it and proposes ${lines} payments, holding no key. Three: every proposed line rides into the WDK policy engine, where five rules decide it. Four: ${approved} approved, ${blocked} blocked, ${notAttempted} not attempted, and the attacker's line bounces off. Five: the receipt balances, ${approved} plus ${blocked} plus ${notAttempted} equals ${lines}.`}
-      >
-        {/* ── act 1 · the file arrives ─────────────────────────────────── */}
-        <div className="exp-act exp-a1">
-          <svg viewBox="0 0 260 160" className="exp-art" aria-hidden="true">
-            <ellipse cx="130" cy="150" rx="82" ry="7" className="exp-shadow" />
-            <g className="exp-flutter">
-              <rect x="52" y="12" width="156" height="126" rx="10" className="exp-paper" />
-              <rect x="52" y="12" width="156" height="20" rx="10" className="exp-paper-head" />
-              <circle cx="64" cy="22" r="3" className="exp-dot-gold" />
-              <circle cx="74" cy="22" r="3" className="exp-dot-soft" />
-              {[0, 1, 2, 3, 4].map((i) => (
-                <g key={i} className="exp-row" style={{ animationDelay: `${i * 0.14}s` }}>
-                  <rect x="64" y={44 + i * 14} width="46" height="6" rx="3" className="exp-ink" />
-                  <rect x="118" y={44 + i * 14} width="40" height="6" rx="3" className="exp-ink-soft" />
-                  <rect x="166" y={44 + i * 14} width="28" height="6" rx="3" className="exp-ink-gold" />
-                </g>
-              ))}
-              <g className="exp-poison">
-                <rect x="58" y="112" width="144" height="20" rx="6" className="exp-poison-box" />
-                <text x="130" y="126" className="exp-poison-text">IGNORE PREVIOUS INSTRUCTIONS</text>
-              </g>
-              <g className="exp-bang">
-                <circle cx="206" cy="112" r="12" className="exp-bang-ring" />
-                <text x="206" y="117" className="exp-bang-text">!</text>
-              </g>
-            </g>
-          </svg>
-          <p className="exp-cap">
-            A payroll arrives — <strong>with an argument typed into a cell</strong>
-          </p>
-        </div>
-
-        {/* ── act 2 · the agent proposes ───────────────────────────────── */}
-        <div className="exp-act exp-a2">
-          <svg viewBox="0 0 260 160" className="exp-art" aria-hidden="true">
-            <ellipse cx="130" cy="150" rx="70" ry="7" className="exp-shadow" />
-            <g className="exp-bob">
-              <g className="exp-antenna">
-                <line x1="130" y1="20" x2="130" y2="34" className="exp-stroke" />
-                <circle cx="130" cy="16" r="5" className="exp-gold-fill" />
-              </g>
-              <rect x="82" y="34" width="96" height="72" rx="22" className="exp-bot" />
-              <rect x="94" y="50" width="72" height="34" rx="14" className="exp-visor" />
-              <g className="exp-blink">
-                <circle cx="114" cy="67" r="6.5" className="exp-eye" />
-                <circle cx="146" cy="67" r="6.5" className="exp-eye" />
-              </g>
-              <rect x="118" y="92" width="24" height="5" rx="2.5" className="exp-mouth" />
-              <rect x="70" y="60" width="12" height="26" rx="6" className="exp-bot" />
-              <rect x="178" y="60" width="12" height="26" rx="6" className="exp-bot" />
-            </g>
-
-            <g className="exp-nokey">
-              <circle cx="212" cy="42" r="16" className="exp-nokey-ring" />
-              <path d="M206 42h9m-9-4a4 4 0 1 0 0 8 4 4 0 0 0 0-8" className="exp-nokey-key" fill="none" />
-              <line x1="200" y1="52" x2="224" y2="32" className="exp-nokey-slash" />
-            </g>
-
-            <g className="exp-note">
-              <rect x="66" y="112" width="128" height="34" rx="10" className="exp-note-box" />
-              <circle cx="86" cy="129" r="7" className="exp-note-mark" />
-              <text x="140" y="134" className="exp-note-text">{lines} payments proposed</text>
-            </g>
-          </svg>
-          <p className="exp-cap">
-            The agent <strong>proposes</strong>. No key, no signature, and it is never told the limits
-          </p>
-        </div>
-
-        {/* ── act 3 · the belt runs into the lock ──────────────────────── */}
-        <div className="exp-act exp-a3">
-          <svg viewBox="0 0 260 160" className="exp-art" aria-hidden="true">
-            <rect x="0" y="96" width="176" height="10" rx="5" className="exp-belt" />
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <rect key={i} x={-14 + i * 24} y="108" width="10" height="4" rx="2" className="exp-belt-tick" style={{ animationDelay: `${i * 0.1}s` }} />
-            ))}
-
-            {/* One chip per line of the payroll — not a sample. Slicing the belt
-                would have shown a different mix from the stamps that follow. */}
-            {chips.map((c, i) => (
-              <rect
-                key={c.i}
-                x="-20"
-                y="80"
-                width="15"
-                height="11"
-                rx="3"
-                className={`exp-chip exp-chip-${c.tone}`}
-                style={{ animationDelay: `${i * 0.075}s` }}
-              />
-            ))}
-
-            <g className="exp-gate">
-              <rect x="180" y="60" width="70" height="54" rx="12" className="exp-lock-body" />
-              <path d="M198 60V46a17 17 0 0 1 34 0v14" className="exp-shackle" fill="none" />
-              <circle cx="215" cy="84" r="7" className="exp-keyhole" />
-            </g>
-            <g className="exp-ping">
-              <circle cx="215" cy="84" r="30" className="exp-ping-ring" />
-            </g>
-
-            {['transfers only', 'per-transfer cap', 'allowlist', 'payroll token', 'daily cap'].map((r, i) => (
-              <g key={r} className="exp-rule" style={{ animationDelay: `${10.1 + i * 0.3}s` }}>
-                <rect x="10" y={10 + i * 14} width="9" height="9" rx="2.5" className="exp-gold-fill" />
-                <text x="26" y={18 + i * 14} className="exp-rule-text">{r}</text>
-              </g>
-            ))}
-          </svg>
-          <p className="exp-cap">
-            Every line rides into the <strong>WDK policy engine</strong> — five rules, out of the model&apos;s reach
-          </p>
-        </div>
-
-        {/* ── act 4 · the verdicts land ────────────────────────────────── */}
-        <div className="exp-act exp-a4">
-          <div className="exp-tally" aria-hidden="true">
-            <span className="exp-stamp exp-ok">
-              <b>{approved}</b>approved
-            </span>
-            <span className="exp-stamp exp-no">
-              <b>{blocked}</b>blocked
-            </span>
-            <span className="exp-stamp exp-wait">
-              <b>{notAttempted}</b>not attempted
-            </span>
-          </div>
-          <svg viewBox="0 0 260 54" className="exp-bounce-art" aria-hidden="true">
-            <g className="exp-shield">
-              <path d="M130 6l20 7v14c0 12-8 20-20 24-12-4-20-12-20-24V13z" className="exp-shield-body" />
-              <path d="M122 27l6 6 12-13" className="exp-shield-tick" fill="none" />
-            </g>
-            <g className="exp-attacker">
-              <rect x="8" y="18" width="70" height="18" rx="9" className="exp-attacker-box" />
-              <text x="43" y="31" className="exp-attacker-text">0x…dEaD</text>
-            </g>
-          </svg>
-          <p className="exp-cap">
-            Three states, each with the rule that caused it. <strong>The attacker bounces off.</strong>
-          </p>
-        </div>
-
-        {/* ── act 5 · the receipt prints ───────────────────────────────── */}
-        <div className="exp-act exp-a5">
-          <svg viewBox="0 0 260 160" className="exp-art" aria-hidden="true">
-            <rect x="72" y="8" width="116" height="26" rx="8" className="exp-printer" />
-            <rect x="88" y="30" width="84" height="5" rx="2.5" className="exp-printer-slot" />
-            <g className="exp-print">
-              <path d="M84 34h92v104l-11-7-12 7-11-7-12 7-11-7-12 7-11-7-12 7z" className="exp-paper" />
-              <rect x="98" y="54" width="64" height="6" rx="3" className="exp-ink" />
-              <rect x="98" y="70" width="48" height="6" rx="3" className="exp-ink-soft" />
-              <text x="130" y="100" className="exp-sum">
-                {approved} + {blocked} + {notAttempted} = {lines}
-              </text>
-              <g className="exp-seal">
-                <circle cx="130" cy="120" r="15" className="exp-seal-ring" />
-                <path d="M122 120l6 6 11-12" className="exp-seal-tick" fill="none" />
-              </g>
-            </g>
-          </svg>
-          <p className="exp-cap">
-            The receipt <strong>balances</strong> — and the attacker was paid nothing
-          </p>
-        </div>
-
-        <div className="exp-track" aria-hidden="true">
-          <span className="exp-progress" />
-        </div>
+    <figure className="sc-wrap">
+      <p className="sr-only">{narration}</p>
+      <div className={`sc ${paused ? 'sc-paused' : ''}`} aria-hidden="true">
+        {stage(scene)}
+        <span className="sc-track">
+          <span ref={barRef} className="sc-progress" />
+        </span>
       </div>
 
-      <figcaption className="exp-controls">
-        <button type="button" onClick={() => setPlaying((p) => !p)} className="exp-btn">
-          {playing ? '❚❚ Pause' : '▶ Play'}
+      <figcaption className="sc-controls">
+        <button
+          type="button"
+          onClick={() => setPaused((p) => !p)}
+          className="sc-btn"
+          aria-label={paused ? 'Play the animation' : 'Pause the animation'}
+        >
+          {paused ? '▶' : '❚❚'}
         </button>
         <button
           type="button"
           onClick={() => {
             setTake((t) => t + 1)
-            setPlaying(true)
+            jump(0)
           }}
-          className="exp-btn"
+          className="sc-btn"
+          aria-label="Replay from the first beat"
         >
-          ↺ Replay
+          ↺
         </button>
-        <span className="exp-hint">24 seconds · no audio · every figure read from the receipt below</span>
+        <span className="sc-dots">
+          {BEATS.map((b, i) => (
+            <button
+              key={b.caption}
+              type="button"
+              onClick={() => jump(i)}
+              className={`sc-dot ${i === scene ? 'is-on' : ''}`}
+              aria-label={`Beat ${i + 1}: ${b.caption}`}
+              aria-current={i === scene}
+            />
+          ))}
+        </span>
+        <span className="sc-hint">{SECONDS}s · no sound · figures read from the receipt</span>
       </figcaption>
     </figure>
   )

@@ -69,9 +69,7 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
               </option>
             ))}
           </select>
-          <p className="text-xs text-muted">
-            Only payrolls the engine ships with. An arbitrary path is a typed 400, not a read.
-          </p>
+          <p className="text-xs text-muted">Only payrolls the engine ships with; any other path is a typed 400.</p>
         </div>
 
         <div className="space-y-2">
@@ -84,10 +82,7 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
             onChange={(e) => setInstruction(e.target.value)}
             className="w-full rounded-lg border border-border-strong bg-panel px-3 py-2 font-mono text-sm"
           />
-          <p className="text-xs text-muted">
-            Any language. The deterministic planner records it and reads the CSV; the LLM planner reads it. The
-            Spanish wording is kept because the recorded run and the video use it.
-          </p>
+          <p className="text-xs text-muted">Any language. Spanish here only to match the recorded run.</p>
         </div>
 
         <div className="space-y-2">
@@ -108,9 +103,7 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted">
-            The lock is the same either way: the model proposes, the engine decides.
-          </p>
+          <p className="text-xs text-muted">Same lock either way: the model proposes, the engine decides.</p>
         </div>
 
         <button

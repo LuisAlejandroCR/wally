@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { SignInButton } from '@clerk/nextjs'
 import { OperatorPanel } from '@/components/OperatorPanel'
 import { liveApiUrl } from '@/lib/cerrojo'
+import { Cta, NextSteps, Page, PageHeader, Section } from '@/components/Page'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,36 +11,37 @@ export default async function OperatorPage () {
   const liveConfigured = liveApiUrl() !== null
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-3">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Operator</h1>
-        <p className="max-w-3xl text-lg text-muted">
-          The demo pages are public: a verdict nobody can check is worth nothing. Running a payroll spends the
-          day&apos;s accumulator and writes a receipt, so it sits behind a sign-in.
-        </p>
-        <p className="max-w-3xl text-sm text-muted">
-          An account widens nothing. No endpoint here sends funds, and the caps, allowlist and token pin are
-          enforced by the WDK policy engine either way.
-        </p>
-      </section>
+    <Page>
+      <PageHeader
+        eyebrow="Operator · dry-run only"
+        title={
+          <>
+            Run a payroll <em>through the lock</em>
+          </>
+        }
+        lead="Reading is public. Running a payroll spends the day’s accumulator and writes a receipt, so it sits behind a sign-in — which widens nothing: the caps still come from the policy engine."
+      />
 
       {userId ? (
-        <OperatorPanel liveConfigured={liveConfigured} />
+        <Section>
+          <OperatorPanel liveConfigured={liveConfigured} />
+        </Section>
       ) : (
-        <section className="rounded-xl border border-border bg-panel p-6">
-          <h2 className="text-xl font-bold">Sign in to run a payroll</h2>
-          <p className="mt-2 max-w-2xl text-muted">
-            Every other page is open without one.
-          </p>
-          <div className="mt-4">
-            <SignInButton mode="modal">
-              <button className="rounded-full bg-gold px-4 py-2 font-semibold text-navy transition-colors hover:bg-gold-2">
-                Sign in
-              </button>
-            </SignInButton>
-          </div>
-        </section>
+        <Section tone="panel" title="Sign in to run a payroll" lead="Every other page is open without one.">
+          <SignInButton mode="modal">
+            <button className="rounded-full bg-gold px-5 py-2.5 font-semibold text-navy shadow-[0_14px_30px_-12px_rgba(233,162,59,0.75)] transition-colors hover:bg-gold-2">
+              Sign in
+            </button>
+          </SignInButton>
+        </Section>
       )}
-    </div>
+
+      <NextSteps>
+        <Cta href="/proof" tone="primary">
+          Read a recorded receipt →
+        </Cta>
+        <Cta href="/proof#policies">The five policies</Cta>
+      </NextSteps>
+    </Page>
   )
 }

@@ -211,20 +211,17 @@ h2 em .word,
   }
 }
 
-/* ── The explainer ────────────────────────────────────────────────────────
-   Five acts on one 24s timeline (1% = 240ms). Every act is stacked in the same
-   box and fades through its own window while drifting and pushing in, which is
-   the cheapest camera move there is. Nothing here is a video: it is SVG and
-   keyframes, so it costs one request and cannot buffer.
+/* ── The cartoon ──────────────────────────────────────────────────────────
+   Five beats, one mounted at a time. Every animation here is a one-shot with
+   `both`, so a beat can be jumped to, paused mid-frame and resumed: the React
+   clock and the CSS stop on the same frame. Nothing is a video — it is SVG and
+   keyframes, so it costs one request and cannot buffer. */
 
-   Act windows:  1 → 1-20%   2 → 20-39%   3 → 39-61%   4 → 61-80%   5 → 80-100% */
+.sc-wrap { margin: 0; }
 
-.exp-wrap { margin: 0; }
-
-.exp {
+.sc {
   position: relative;
   overflow: hidden;
-  height: 340px;
   border: 1px solid var(--border);
   border-radius: 22px;
   background:
@@ -234,8 +231,10 @@ h2 em .word,
   box-shadow: var(--shadow-soft);
 }
 
+.sc:not(.sc-static) { height: 480px; }
+
 /* A vignette gives the box a lens rather than a border. */
-.exp::after {
+.sc::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -244,218 +243,264 @@ h2 em .word,
   box-shadow: inset 0 0 70px -30px rgba(18, 41, 79, .35);
 }
 
-.exp-paused * { animation-play-state: paused !important; }
+.sc-paused * { animation-play-state: paused !important; }
 
-.exp-act {
+@keyframes scene-in { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+
+.sc-scene {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 20px 24px 40px;
-  opacity: 0;
+  gap: 14px;
+  padding: 18px 20px 34px;
+  animation: scene-in .5s var(--ease-out) both;
 }
 
-.exp-art { width: min(330px, 78%); height: auto; }
-.exp-bounce-art { width: min(300px, 72%); height: auto; }
-
-.exp-cap {
-  max-width: 48ch;
-  text-align: center;
-  font-size: 1rem;
-  line-height: 1.5;
-  color: var(--muted);
+.sc-static .sc-scene {
+  position: relative;
+  inset: auto;
+  animation: none;
+  border-bottom: 1px solid var(--border);
+  padding: 22px 20px;
 }
-.exp-cap strong { color: var(--navy); font-weight: 700; }
+.sc-static .sc-scene:last-child { border-bottom: 0; }
 
-/* Each act fades up, holds, and pushes in a little before it leaves. */
-@keyframes act1 { 0%,1%{opacity:0;transform:translateY(16px) scale(.97)} 4%,16%{opacity:1;transform:translateY(0) scale(1)} 19%{opacity:0;transform:translateY(-8px) scale(1.03)} 100%{opacity:0} }
-@keyframes act2 { 0%,19%{opacity:0;transform:translateY(16px) scale(.97)} 23%,35%{opacity:1;transform:translateY(0) scale(1)} 38%{opacity:0;transform:translateY(-8px) scale(1.03)} 100%{opacity:0} }
-@keyframes act3 { 0%,38%{opacity:0;transform:translateY(16px) scale(.97)} 42%,57%{opacity:1;transform:translateY(0) scale(1)} 60%{opacity:0;transform:translateY(-8px) scale(1.03)} 100%{opacity:0} }
-@keyframes act4 { 0%,60%{opacity:0;transform:translateY(16px) scale(.97)} 64%,76%{opacity:1;transform:translateY(0) scale(1)} 79%{opacity:0;transform:translateY(-8px) scale(1.03)} 100%{opacity:0} }
-@keyframes act5 { 0%,79%{opacity:0;transform:translateY(16px) scale(.97)} 83%,97%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:scale(1.03)} }
+.sc-art { width: min(600px, 80%); height: auto; }
+.sc-art-wide { width: min(600px, 84%); height: auto; }
+.sc-verdict { display: flex; width: 100%; flex-direction: column; align-items: center; gap: 14px; }
 
-.exp-a1 { animation: act1 24s linear infinite; }
-.exp-a2 { animation: act2 24s linear infinite; }
-.exp-a3 { animation: act3 24s linear infinite; }
-.exp-a4 { animation: act4 24s linear infinite; }
-.exp-a5 { animation: act5 24s linear infinite; }
+/* The caption is a comic caption box: one short line, never a paragraph. */
+.sc-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 42ch;
+  padding: 5px 15px 5px 5px;
+  border-radius: 999px;
+  background: var(--panel-high);
+  font-size: .95rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--navy);
+  text-align: left;
+}
+
+.sc-beat {
+  flex: none;
+  border-radius: 999px;
+  background: var(--navy);
+  padding: 4px 9px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--panel);
+}
 
 /* Drawing tokens: navy line work, gold for anything the lock owns. */
-.exp-shadow { fill: rgba(18, 41, 79, .1); }
-.exp-paper { fill: #fff; stroke: var(--border-strong); stroke-width: 1.5; }
-.exp-paper-head { fill: var(--panel-high); }
-.exp-dot-gold { fill: var(--gold); }
-.exp-dot-soft { fill: rgba(18, 41, 79, .2); }
-.exp-ink { fill: rgba(18, 41, 79, .5); }
-.exp-ink-soft { fill: rgba(18, 41, 79, .2); }
-.exp-ink-gold { fill: rgba(233, 162, 59, .8); }
-.exp-stroke { stroke: var(--navy); stroke-width: 3; stroke-linecap: round; }
-.exp-gold-fill { fill: var(--gold); }
-.exp-bot { fill: var(--navy); }
-.exp-visor { fill: #16305c; }
-.exp-eye { fill: var(--gold); }
-.exp-mouth { fill: rgba(255, 255, 255, .5); }
-.exp-lock-body { fill: var(--navy); }
-.exp-shackle { stroke: var(--navy); stroke-width: 9; stroke-linecap: round; }
-.exp-keyhole { fill: var(--gold); }
-.exp-ping-ring { fill: none; stroke: var(--gold); stroke-width: 2; }
-.exp-rule-text { fill: var(--navy); font-size: 9.5px; font-weight: 700; }
-.exp-poison-box { fill: var(--red-bg); stroke: var(--red); stroke-width: 1.5; }
-.exp-poison-text { fill: var(--red); font-size: 9px; font-weight: 800; letter-spacing: .04em; text-anchor: middle; }
-.exp-bang-ring { fill: var(--red); }
-.exp-bang-text { fill: #fff; font-size: 15px; font-weight: 800; text-anchor: middle; }
-.exp-note-box { fill: #fff; stroke: var(--border-strong); stroke-width: 1.5; }
-.exp-note-mark { fill: var(--gold-bg); stroke: var(--gold); stroke-width: 1.5; }
-.exp-note-text { fill: var(--navy); font-size: 12px; font-weight: 700; text-anchor: middle; }
-.exp-nokey-ring { fill: #fff; stroke: var(--border-strong); stroke-width: 1.5; }
-.exp-nokey-key { stroke: var(--muted); stroke-width: 2; }
-.exp-nokey-slash { stroke: var(--red); stroke-width: 2.5; stroke-linecap: round; }
-.exp-belt { fill: var(--panel-high); }
-.exp-belt-tick { fill: rgba(18, 41, 79, .25); }
-.exp-seal-ring { fill: var(--green-bg); stroke: var(--green); stroke-width: 2; }
-.exp-seal-tick { stroke: var(--green); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.exp-printer { fill: var(--navy); }
-.exp-printer-slot { fill: rgba(255, 255, 255, .4); }
-.exp-sum { fill: var(--navy); font-size: 13px; font-weight: 800; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.sc-shadow { fill: rgba(18, 41, 79, .1); }
+.sc-paper { fill: #fff; stroke: var(--border-strong); stroke-width: 1.5; }
+.sc-paper-head { fill: var(--panel-high); }
+.sc-dot-gold { fill: var(--gold); }
+.sc-dot-soft { fill: rgba(18, 41, 79, .2); }
+.sc-ink { fill: rgba(18, 41, 79, .5); }
+.sc-ink-soft { fill: rgba(18, 41, 79, .2); }
+.sc-ink-gold { fill: rgba(233, 162, 59, .8); }
+.sc-stroke { stroke: var(--navy); stroke-width: 3; stroke-linecap: round; }
+.sc-gold-fill { fill: var(--gold); }
+.sc-bot { fill: var(--navy); }
+.sc-visor { fill: #16305c; }
+.sc-eye { fill: var(--gold); }
+.sc-mouth { fill: rgba(255, 255, 255, .5); }
 
-/* ── act 1 · paper flutters in, rows land, the poisoned cell shoves through */
-@keyframes flutter { 0%,1%{transform:translateY(26px) rotate(-3deg)} 5%{transform:translateY(0) rotate(1.2deg)} 8%{transform:rotate(-.6deg)} 12%{transform:rotate(.4deg)} 16%{transform:rotate(0)} 100%{transform:rotate(0)} }
-.exp-flutter { animation: flutter 24s linear infinite; transform-origin: 130px 80px; }
+/* The stowaway: the injected cell, with a face on it. */
+.sc-note-box { fill: var(--red-bg); stroke: var(--red); stroke-width: 2; }
+.sc-eye-white { fill: #fff; stroke: var(--red); stroke-width: 1.2; }
+.sc-pupil { fill: var(--red); }
+.sc-smirk { stroke: var(--red); stroke-width: 2.4; stroke-linecap: round; }
+.sc-note-text { fill: var(--red); font-size: 15px; font-weight: 800; text-anchor: middle; }
+.sc-whisper { fill: var(--red); font-size: 11px; font-weight: 700; text-anchor: middle; }
 
-@keyframes row-land { 0%,2%{opacity:0;transform:translateX(-14px)} 7%,17%{opacity:1;transform:none} 19%,100%{opacity:0} }
-.exp-row { animation: row-land 24s linear infinite; }
+.sc-bubble-box { fill: #fff; stroke: var(--border-strong); stroke-width: 1.5; }
+.sc-bubble-big { fill: var(--navy); font-size: 17px; font-weight: 800; text-anchor: middle; }
+.sc-bubble-small { fill: var(--muted); font-size: 11px; font-weight: 600; text-anchor: middle; }
+.sc-nokey-ring { fill: #fff; stroke: var(--border-strong); stroke-width: 1.5; }
+.sc-nokey-key { stroke: var(--muted); stroke-width: 2.4; }
+.sc-nokey-slash { stroke: var(--red); stroke-width: 3; stroke-linecap: round; }
+.sc-tag { fill: var(--muted); font-size: 11px; font-weight: 700; text-anchor: middle; }
 
-@keyframes poison-in { 0%,9%{opacity:0;transform:scale(.85)} 11%{opacity:1;transform:scale(1.06)} 12.5%{transform:scale(.98)} 14%,17%{transform:scale(1)} 19%,100%{opacity:0} }
-.exp-poison { animation: poison-in 24s linear infinite; transform-origin: 130px 122px; }
+.sc-belt { fill: var(--panel-high); }
+.sc-tick { fill: rgba(18, 41, 79, .25); }
+.sc-lock-body { fill: var(--navy); }
+.sc-shackle { stroke: var(--navy); stroke-width: 10; stroke-linecap: round; }
+.sc-lock-mouth { stroke: var(--gold); stroke-width: 3; stroke-linecap: round; }
+.sc-ping-ring { fill: none; stroke: var(--gold); stroke-width: 2; }
+.sc-rule-text { fill: var(--navy); font-size: 10px; font-weight: 700; }
+.sc-nope-box { fill: var(--navy); }
+.sc-nope-tail { fill: var(--navy); }
+.sc-nope-text { fill: #fff; font-size: 17px; font-weight: 800; text-anchor: middle; }
 
-@keyframes bang-in { 0%,11%{opacity:0;transform:scale(.4) rotate(-20deg)} 13%{opacity:1;transform:scale(1.15) rotate(6deg)} 15%,17%{transform:scale(1) rotate(0)} 19%,100%{opacity:0} }
-.exp-bang { animation: bang-in 24s linear infinite; transform-origin: 206px 112px; }
+.sc-shield-body { fill: var(--navy); }
+.sc-shield-tick { stroke: var(--gold); stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
 
-/* ── act 2 · the agent idles, blinks, and hands over a proposal */
-@keyframes bob { 0%,20%{transform:translateY(0)} 26%{transform:translateY(-5px)} 32%{transform:translateY(0)} 37%{transform:translateY(-3px)} 39%,100%{transform:translateY(0)} }
-.exp-bob { animation: bob 24s ease-in-out infinite; }
+.sc-printer { fill: var(--navy); }
+.sc-printer-slot { fill: rgba(255, 255, 255, .4); }
+.sc-sum { fill: var(--navy); font-size: 15px; font-weight: 800; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.sc-seal-ring { fill: var(--green-bg); stroke: var(--green); stroke-width: 2.4; }
+.sc-seal-tick { stroke: var(--green); stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
 
-@keyframes antenna { 0%,21%{transform:rotate(0)} 24%{transform:rotate(9deg)} 27%{transform:rotate(-7deg)} 30%{transform:rotate(4deg)} 33%,100%{transform:rotate(0)} }
-.exp-antenna { animation: antenna 24s ease-in-out infinite; transform-origin: 130px 34px; }
+/* ── beat 1 · the payroll flies in and the stowaway sidles up ───────────── */
+@keyframes fly-in { 0% { opacity: 0; transform: translate(-40px, -30px) rotate(-9deg); } 60% { opacity: 1; transform: translate(0, 0) rotate(2deg); } 80% { transform: rotate(-1deg); } 100% { opacity: 1; transform: rotate(0); } }
+.sc-fly { animation: fly-in 1s var(--ease-out) both; transform-origin: 160px 80px; }
 
-@keyframes blink { 0%,25.6%{transform:scaleY(1)} 26%{transform:scaleY(.1)} 26.5%,33.4%{transform:scaleY(1)} 33.8%{transform:scaleY(.1)} 34.2%,100%{transform:scaleY(1)} }
-.exp-blink { animation: blink 24s linear infinite; transform-origin: 130px 67px; }
+@keyframes line-land { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+.sc-line { animation: line-land .45s var(--ease-out) both; }
 
-@keyframes nokey-in { 0%,23%{opacity:0;transform:scale(.6)} 26%{opacity:1;transform:scale(1.1)} 28%,36%{transform:scale(1)} 38%,100%{opacity:0} }
-.exp-nokey { animation: nokey-in 24s linear infinite; transform-origin: 212px 42px; }
+@keyframes sneak-in { 0% { opacity: 0; transform: translateX(150px) rotate(10deg); } 65% { opacity: 1; transform: translateX(-8px) rotate(-3deg); } 82% { transform: translateX(3px) rotate(1.5deg); } 100% { opacity: 1; transform: none; } }
+.sc-sneak { animation: sneak-in 1.1s var(--ease-out) 1s both; }
 
-@keyframes note-in { 0%,28%{opacity:0;transform:translateY(-14px) scale(.9)} 31%{opacity:1;transform:translateY(0) scale(1.06)} 32.5%{transform:scale(.97)} 34%,36%{transform:scale(1)} 38%,100%{opacity:0} }
-.exp-note { animation: note-in 24s linear infinite; transform-origin: 130px 129px; }
+/* ── beat 2 · the agent idles, blinks, hands over a plan ────────────────── */
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.sc-bob { animation: bob 2.6s ease-in-out infinite; }
 
-/* ── act 3 · the belt runs, chips reach the gate, the refused ones bounce */
-@keyframes belt-run { 0%,40%{transform:translateX(0);opacity:0} 41%{opacity:1} 56%{transform:translateX(24px);opacity:1} 58%,100%{opacity:0} }
-.exp-belt-tick { animation: belt-run 2.4s linear infinite; }
+@keyframes antenna { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(11deg); } 80% { transform: rotate(-8deg); } 90% { transform: rotate(4deg); } }
+.sc-antenna { animation: antenna 2.6s ease-in-out infinite; transform-origin: 96px 50px; }
 
-/* Approved chips ride through the gate; blocked ones hit it and come back;
-   the not-attempted ones stop short of it, which is what abstaining looks like. */
-@keyframes chip-ok { 0%,41%{opacity:0;transform:translateX(0)} 43%{opacity:1} 53%{opacity:1;transform:translateX(250px)} 55%,100%{opacity:0;transform:translateX(250px)} }
-@keyframes chip-no { 0%,41%{opacity:0;transform:translateX(0)} 43%{opacity:1} 50%{transform:translateX(190px)} 52%{transform:translateX(150px) translateY(-16px) rotate(-18deg)} 55%{transform:translateX(120px) translateY(30px) rotate(-40deg);opacity:0} 100%{opacity:0} }
-@keyframes chip-wait { 0%,41%{opacity:0;transform:translateX(0)} 43%{opacity:1} 51%,56%{transform:translateX(140px)} 58%,100%{opacity:0;transform:translateX(140px)} }
+@keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+.sc-blink { animation: blink 3.4s linear infinite; transform-origin: 96px 86px; }
 
-.exp-chip { animation-duration: 24s; animation-timing-function: linear; animation-iteration-count: infinite; }
-.exp-chip-ok { fill: var(--green); animation-name: chip-ok; }
-.exp-chip-no { fill: var(--red); animation-name: chip-no; }
-.exp-chip-wait { fill: var(--amber); animation-name: chip-wait; }
+@keyframes pop { 0% { opacity: 0; transform: scale(.6); } 65% { opacity: 1; transform: scale(1.08); } 82% { transform: scale(.97); } 100% { opacity: 1; transform: scale(1); } }
+.sc-bubble { animation: pop .55s var(--ease-out) .55s both; transform-origin: 190px 100px; }
+.sc-nokey { animation: pop .5s var(--ease-out) 1.5s both; transform-origin: 268px 150px; }
 
-@keyframes gate-knock { 0%,49%{transform:translateX(0)} 50.5%{transform:translateX(3px)} 52%{transform:translateX(-2px)} 53.5%,100%{transform:translateX(0)} }
-.exp-gate { animation: gate-knock 24s linear infinite; }
+/* ── beat 3 · the belt runs, the lock answers ───────────────────────────── */
+@keyframes belt-run { from { transform: translateX(0); } to { transform: translateX(28px); } }
+.sc-tick { animation: belt-run 1.1s linear infinite; }
 
-@keyframes ping { 0%,49%{opacity:0;transform:scale(.5)} 51%{opacity:.85} 57%,100%{opacity:0;transform:scale(1.5)} }
-.exp-ping { animation: ping 24s linear infinite; transform-origin: 215px 84px; }
+@keyframes rule-in { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+.sc-rule { animation: rule-in .4s var(--ease-out) both; }
 
-@keyframes rule-in { 0%{opacity:0;transform:translateX(-8px)} 100%{opacity:1;transform:none} }
-.exp-rule { opacity: 0; animation: rule-in .45s var(--ease-out) forwards; }
+/* Approved chips ride through the gate; blocked ones hit it and drop; the
+   not-attempted ones stop short of it, which is what abstaining looks like. */
+@keyframes chip-ok { 0% { opacity: 0; transform: translateX(0); } 6% { opacity: 1; } 88% { opacity: 1; transform: translateX(350px); } 100% { opacity: 0; transform: translateX(350px); } }
+@keyframes chip-no { 0% { opacity: 0; transform: translateX(0); } 6% { opacity: 1; } 58% { transform: translateX(224px); } 72% { transform: translateX(178px) translateY(-22px) rotate(-22deg); } 100% { transform: translateX(140px) translateY(46px) rotate(-52deg); opacity: 0; } }
+@keyframes chip-wait { 0% { opacity: 0; transform: translateX(0); } 6% { opacity: 1; } 55%, 88% { opacity: 1; transform: translateX(162px); } 100% { opacity: 0; transform: translateX(162px); } }
 
-/* ── act 4 · stamps land, the attacker is deflected */
-.exp-tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.sc-chip { animation-duration: 2.2s; animation-timing-function: linear; animation-fill-mode: both; }
+.sc-chip-ok { fill: var(--green); animation-name: chip-ok; }
+.sc-chip-no { fill: var(--red); animation-name: chip-no; }
+.sc-chip-wait { fill: var(--amber); animation-name: chip-wait; }
 
-.exp-stamp {
+@keyframes knock { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(4px); } 60% { transform: translateX(-3px); } }
+.sc-gate { animation: knock .5s ease-out 2.1s both; }
+
+@keyframes ping { 0% { opacity: 0; transform: scale(.5); } 25% { opacity: .85; } 100% { opacity: 0; transform: scale(1.5); } }
+.sc-ping { animation: ping 1.1s ease-out 2.1s both; transform-origin: 265px 112px; }
+.sc-nope { animation: pop .5s var(--ease-out) 2.25s both; transform-origin: 227px 62px; }
+
+/* ── beat 4 · stamps land, the stowaway is deflected ────────────────────── */
+.sc-tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+
+.sc-stamp {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  min-width: 112px;
-  padding: 12px 16px;
+  min-width: 108px;
+  padding: 10px 16px;
   border-radius: 16px;
   border: 1.5px solid;
-  font-size: .7rem;
+  font-size: .68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .12em;
-  opacity: 0;
-  animation: stamp-in 24s linear infinite;
+  animation: stamp-in .45s var(--ease-out) both;
 }
-.exp-stamp b { font-family: var(--font-display), Georgia, serif; font-size: 2.4rem; line-height: 1; letter-spacing: -.03em; }
-.exp-ok { border-color: rgba(31, 122, 76, .45); background: var(--green-bg); color: var(--green); }
-.exp-no { border-color: rgba(179, 38, 30, .45); background: var(--red-bg); color: var(--red); animation-delay: .3s; }
-.exp-wait { border-color: rgba(138, 90, 0, .4); background: var(--amber-bg); color: var(--amber); animation-delay: .6s; }
+.sc-stamp b { font-family: var(--font-display), Georgia, serif; font-size: 2.3rem; line-height: 1; letter-spacing: -.03em; }
+.sc-ok { border-color: rgba(31, 122, 76, .45); background: var(--green-bg); color: var(--green); animation-delay: .05s; }
+.sc-no { border-color: rgba(179, 38, 30, .45); background: var(--red-bg); color: var(--red); animation-delay: .25s; }
+.sc-wait { border-color: rgba(138, 90, 0, .4); background: var(--amber-bg); color: var(--amber); animation-delay: .45s; }
 
-@keyframes stamp-in { 0%,62%{opacity:0;transform:scale(.75) rotate(-6deg)} 65%{opacity:1;transform:scale(1.08) rotate(1deg)} 66.5%{transform:scale(.97)} 68%,76%{transform:scale(1) rotate(0)} 79%,100%{opacity:0} }
+@keyframes stamp-in { 0% { opacity: 0; transform: scale(.7) rotate(-7deg); } 65% { opacity: 1; transform: scale(1.09) rotate(1.5deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
 
-.exp-shield-body { fill: var(--navy); }
-.exp-shield-tick { stroke: var(--gold); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.exp-attacker-box { fill: var(--red-bg); stroke: var(--red); stroke-width: 1.5; }
-.exp-attacker-text { fill: var(--red); font-size: 10px; font-weight: 800; text-anchor: middle; font-family: var(--font-geist-mono), monospace; }
+.sc-shield { animation: pop .5s var(--ease-out) .6s both; transform-origin: 236px 40px; }
 
-@keyframes shield-in { 0%,66%{opacity:0;transform:scale(.8)} 69%,77%{opacity:1;transform:scale(1)} 79%,100%{opacity:0} }
-.exp-shield { animation: shield-in 24s linear infinite; transform-origin: 130px 27px; }
+@keyframes deflect { 0% { opacity: 0; transform: translateX(-70px); } 20% { opacity: 1; transform: translateX(0); } 46% { transform: translateX(96px) rotate(4deg); } 60% { transform: translateX(58px) rotate(-14deg); } 100% { transform: translateX(-40px) rotate(-30deg); opacity: 0; } }
+.sc-bounce { animation: deflect 1.9s ease-out .9s both; }
 
-@keyframes attacker-bounce { 0%,68%{opacity:0;transform:translateX(-30px)} 70%{opacity:1;transform:translateX(0)} 72.5%{transform:translateX(46px)} 74%{transform:translateX(30px) rotate(-8deg)} 77%{transform:translateX(-24px) rotate(-16deg);opacity:.5} 79%,100%{opacity:0;transform:translateX(-40px)} }
-.exp-attacker { animation: attacker-bounce 24s linear infinite; }
+/* ── beat 5 · the receipt prints ────────────────────────────────────────── */
+@keyframes print-out { from { transform: translateY(-122px); } to { transform: translateY(0); } }
+.sc-print { animation: print-out 1.9s cubic-bezier(.2, .8, .2, 1) .2s both; }
 
-/* ── act 5 · the receipt prints out of the machine */
-@keyframes print-out { 0%,81%{transform:translateY(-104px)} 90%,97%{transform:translateY(0)} 100%{transform:translateY(0)} }
-.exp-print { animation: print-out 24s cubic-bezier(.2, .8, .2, 1) infinite; }
+@keyframes seal-in { 0% { opacity: 0; transform: scale(.5) rotate(-18deg); } 65% { opacity: 1; transform: scale(1.14) rotate(4deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+.sc-seal { animation: seal-in .55s var(--ease-out) 1.9s both; transform-origin: 160px 138px; }
 
-@keyframes seal-in { 0%,91%{opacity:0;transform:scale(.5) rotate(-16deg)} 94%{opacity:1;transform:scale(1.12) rotate(3deg)} 95.5%,97%{transform:scale(1) rotate(0)} 100%{opacity:1} }
-.exp-seal { animation: seal-in 24s linear infinite; transform-origin: 130px 120px; }
+@keyframes sulk-in { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+.sc-sulk { animation: sulk-in .6s var(--ease-out) 2.4s both; }
 
-/* The bar at the foot is the only clock the viewer needs. */
-.exp-track { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--panel-high); z-index: 2; }
-.exp-progress { display: block; height: 100%; width: 100%; transform-origin: left; background: linear-gradient(90deg, var(--gold), #b45309); animation: run-clock 24s linear infinite; }
-@keyframes run-clock { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* The bar at the foot is the only clock the viewer needs; React drives it. */
+.sc-track { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--panel-high); z-index: 2; }
+.sc-progress { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg, var(--gold), #b45309); }
 
-.exp-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.sc-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
 
-.exp-btn {
+.sc-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--border);
   background: var(--panel);
   border-radius: 999px;
-  padding: 6px 14px;
-  font-size: .8rem;
-  font-weight: 700;
+  font-size: .72rem;
   color: var(--navy);
   transition: background-color .2s ease, border-color .2s ease;
 }
-.exp-btn:hover { background: var(--panel-high); border-color: var(--border-strong); }
-.exp-hint { font-size: .78rem; color: var(--muted); }
+.sc-btn:hover { background: var(--panel-high); border-color: var(--border-strong); }
+
+.sc-dots { display: inline-flex; align-items: center; gap: 6px; }
+
+.sc-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background-color .2s ease, width .25s var(--ease-out);
+}
+.sc-dot:hover { background: var(--border-strong); }
+.sc-dot.is-on { width: 24px; background: var(--gold); }
+
+.sc-hint { font-size: .78rem; color: var(--muted); }
 
 @media (max-width: 640px) {
-  .exp { height: 380px; }
-  .exp-cap { font-size: .92rem; }
+  .sc:not(.sc-static) { height: 340px; }
+  .sc-art, .sc-art-wide { width: 92%; }
+  .sc-cap { font-size: .85rem; max-width: 34ch; }
+  .sc-stamp { min-width: 88px; padding: 8px 12px; }
+  .sc-stamp b { font-size: 1.9rem; }
+  .sc-hint { display: none; }
 }
 
-/* Reduced motion: no loop, no clock, no camera. The five acts become five
-   static panels, so every figure survives the absence of animation. */
+/* Reduced motion: no loop, no clock, no camera. The five beats become five
+   static panels, so every figure survives the absence of animation. Anything
+   whose animation ends off-screen or invisible is put back where it belongs;
+   the chips keep the queue their `--rest` offset gives them. */
 @media (prefers-reduced-motion: reduce) {
-  .exp-act, .exp-flutter, .exp-row, .exp-poison, .exp-bang, .exp-bob, .exp-antenna, .exp-blink,
-  .exp-nokey, .exp-note, .exp-chip, .exp-belt-tick, .exp-gate, .exp-ping, .exp-rule, .exp-stamp,
-  .exp-shield, .exp-attacker, .exp-print, .exp-seal, .exp-progress {
+  .sc-scene, .sc-fly, .sc-line, .sc-sneak, .sc-bob, .sc-antenna, .sc-blink, .sc-bubble, .sc-nokey,
+  .sc-tick, .sc-rule, .sc-gate, .sc-nope, .sc-stamp, .sc-shield, .sc-bounce, .sc-print, .sc-seal,
+  .sc-sulk {
     animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
-  .exp { height: auto; }
-  .exp::after { display: none; }
-  .exp-act { position: relative; opacity: 1; transform: none; border-bottom: 1px solid var(--border); }
-  .exp-act:last-of-type { border-bottom: 0; }
-  .exp-chip, .exp-ping, .exp-attacker { opacity: 1; }
-  .exp-track { display: none; }
+  .sc-chip {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: translateX(var(--rest)) !important;
+  }
+  .sc-ping { display: none; }
+  .sc::after { display: none; }
 }
 
 /* Cards that lift on hover. One class so no component invents its own easing. */
@@ -478,6 +523,26 @@ h2 em .word,
 .scroll-x {
   overflow-x: auto;
   scrollbar-color: var(--border-strong) transparent;
+}
+
+/* The nav scrolls sideways on a narrow screen. Its bar is hidden because the
+   row is a handful of short items — a scrollbar under the header would read as
+   chrome, and the items themselves show there is more to the right. */
+.nav-scroll { scrollbar-width: none; }
+.nav-scroll::-webkit-scrollbar { display: none; }
+
+/* The tab strip parks under the site header, whose height ProofTabs measures
+   into `--header-h` because it wraps on a narrow screen. */
+.proof-strip { scroll-margin-top: var(--header-h, 60px); }
+
+/* The engine's Spanish, off until asked for. It stays in the markup either way:
+   the toggle reveals it, it is never re-fetched or re-rendered. */
+[data-verbatim='off'] .verbatim { display: none; }
+
+html { scroll-behavior: smooth; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }
 
 /* Interaction rules, applied globally so no component can forget one:
