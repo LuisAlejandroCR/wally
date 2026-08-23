@@ -1,3 +1,10 @@
+// tests/policy.test.js
+//
+// The lock on its own, with the RPC pointed at a dead port. If any policy needed
+// the network these tests would hang, so the fact that they pass in milliseconds
+// is itself the assertion: refusing costs no network, and the engine denies with
+// the chain unreachable.
+
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
@@ -7,10 +14,10 @@ import { cargarConfig } from '../src/config.js'
 import { LedgerDiario } from '../src/policy/ledger.js'
 import { abrirSesion, esViolacionDePolitica } from '../src/wdk/session.js'
 
-// Seed de prueba: se genera en memoria, nunca se escribe ni se imprime.
+// Test seed: minted in memory, never written and never printed.
 const SEED = WDK.getRandomSeedPhrase()
 
-// RPC en un puerto muerto: si una politica necesitara la red, estos tests colgarian.
+// RPC on a dead port: if a policy needed the network, these tests would hang.
 const cfg = cargarConfig({
   CERROJO_RPC_URL: 'http://127.0.0.1:9',
   CERROJO_CAP_TX: '500000000',

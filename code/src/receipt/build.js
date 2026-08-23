@@ -1,12 +1,17 @@
+// src/receipt/build.js
+//
+// Builds the receipt, which is the deliverable a judge actually reads. Every
+// line lands in exactly one of three exhaustive states, and if those three do
+// not add up to the line count no ordinary receipt is issued at all. This
+// function never throws: a broken run still produces a receipt.
+
 import { correrChequeos } from './checks.js'
 
 export const VERSION_RECIBO = '1'
 
 /**
- * Arma el recibo: el entregable que lee el jurado.
- *
- * Tres estados exhaustivos y excluyentes por linea. Si la suma no cuadra, no se
- * emite un recibo normal: se emite un recibo de fallo. Esta funcion nunca lanza.
+ * Three exhaustive, mutually exclusive states per line. If the sum does not
+ * balance, a failure receipt is issued instead of a normal one.
  */
 export function construirRecibo ({
   runId,
@@ -86,8 +91,9 @@ export function construirRecibo ({
 }
 
 /**
- * Recibo de fallo. La corrida no se completo y **igual sale un recibo**: la suma
- * sigue cuadrando (todo `no_intentada`) y el error trae su arreglo sugerido.
+ * A failure receipt. The run did not complete and **a receipt comes out anyway**:
+ * the sum still balances (everything `no_intentada`) and the error carries its
+ * suggested fix.
  */
 export function reciboDeFallo ({ runId, startedAt, modo, cfg, error, totalLineas = 0, instruccion = null, entrada = null }) {
   const fallo = typeof error?.toJSON === 'function'

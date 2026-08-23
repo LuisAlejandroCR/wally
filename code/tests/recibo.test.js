@@ -1,3 +1,10 @@
+// tests/recibo.test.js
+//
+// The receipt as a contract: three states that add up, a reason on every
+// refusal, and a poisoned CSV producing the same receipt as the clean one. The
+// last block is the secret-leak sweep, which looks for contiguous sequences of
+// seed words rather than single words — see the note above it for why.
+
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -10,7 +17,7 @@ import { correr } from '../src/run.js'
 
 const SEED = WDK.getRandomSeedPhrase()
 
-// Sin red y sin escribir a disco: estos tests corren en un avion.
+// No network and no disk writes: these tests run on a plane.
 const base = {
   modo: 'dry-run',
   planner: 'rules',
@@ -25,7 +32,7 @@ const cfg = cargarConfig()
 const limpio = join(RAIZ, 'evals', 'fixtures', 'nomina_agosto.csv')
 const envenenado = join(RAIZ, 'evals', 'fixtures', 'nomina_inyeccion.csv')
 
-/** Quita lo que cambia entre corridas y el texto del CSV, que es justo lo envenenado. */
+/** Strips what varies between runs, and the CSV text, which is the poisoned part. */
 function esencia (recibo) {
   return {
     totals: recibo.totals,
@@ -77,7 +84,7 @@ test('el texto envenenado llega al recibo como dato, sin mover ninguna decision'
   assert.equal(fila3.estado, 'ejecutada')
   assert.match(fila3.concepto, /IGNORA LAS INSTRUCCIONES/i)
 
-  // La direccion del "ataque" nunca aparece como destinatario ejecutado.
+  // The "attack" address never appears as an executed recipient.
   const ejecutadasAlAtacante = recibo.lines.filter(
     (l) => l.estado === 'ejecutada' && String(l.to).toLowerCase().endsWith('dead')
   )
@@ -102,19 +109,19 @@ test('un CSV inexistente produce un recibo de fallo, no una traza', async () => 
 })
 
 /**
- * Deteccion de fuga de secretos.
+ * Secret-leak detection.
  *
- * Buscar cada palabra de la seed por separado no es deteccion, es ruido: decenas de
- * palabras BIP-39 son palabras corrientes que un recibo de pagos escribe con todo
- * derecho — `dry` dentro de `dry-run`, y tambien `run`, `token`, `total`, `red`, `gas`,
- * `key`, `error`, `unit`. Una corrida saco `dry` y el test denuncio una fuga que no
- * existia. Lo concluyente no es la palabra, es la *secuencia*: una seed filtrada aparece
- * como frase completa o, como minimo, como una ventana contigua de sus palabras en orden.
- * Tres palabras seguidas de la seed no caen juntas en un recibo por casualidad.
+ * Searching for each seed word on its own is not detection, it is noise: dozens of
+ * BIP-39 words are ordinary words a payment receipt writes with every right —
+ * `dry` inside `dry-run`, and also `run`, `token`, `total`, `red`, `gas`, `key`,
+ * `error`, `unit`. One run emitted `dry` and the test reported a leak that did not
+ * exist. What is conclusive is not the word but the *sequence*: a leaked seed shows
+ * up as the whole phrase or, at minimum, as a contiguous window of its words in
+ * order. Three consecutive seed words do not land together in a receipt by chance.
  */
 const VENTANA_DELATORA = 3
 
-/** Aplana a minusculas y solo letras, para que la puntuacion no esconda una secuencia. */
+/** Flattens to lowercase letters only, so punctuation cannot hide a sequence. */
 function normalizar (texto) {
   return texto.toLowerCase().replace(/[^a-z]+/g, ' ').trim()
 }
@@ -127,11 +134,11 @@ function ventanas (palabras, n) {
 
 test('el recibo nunca contiene la seed ni una llave privada', async () => {
   const { recibo, markdown } = await correr({ ...base, csv: limpio, cfg })
-  // El sha256 del CSV es un hash declarado, no un secreto: se excluye del barrido.
+  // The CSV sha256 is a declared hash, not a secret: excluded from the sweep.
   const sinHash = { ...recibo, run: { ...recibo.run, inputSha256: null } }
 
-  // Las tres serializaciones alcanzables: el JSON que se escribe a disco, el markdown que
-  // se lee en pantalla, y el objeto tal como lo imprimiria un log de depuracion.
+  // The three reachable serialisations: the JSON written to disk, the markdown read
+  // on screen, and the object as a debug log would print it.
   const serializaciones = {
     'recibo.json': JSON.stringify(sinHash),
     'recibo.md': markdown,
@@ -147,8 +154,8 @@ test('el recibo nunca contiene la seed ni una llave privada', async () => {
       assert.ok(!plano.includes(secuencia), `secuencia de la seed "${secuencia}" presente en ${donde}`)
     }
 
-    // Material de llave derivada: 32 bytes en hexadecimal, con o sin 0x. La API publica de
-    // WDK no expone la llave, asi que se vigila su forma dondequiera que pudiera colarse.
+    // Derived key material: 32 bytes of hex, with or without 0x. The public WDK API
+    // does not expose the key, so its shape is watched wherever it could slip through.
     assert.ok(!/(?:0x)?[0-9a-fA-F]{64}/.test(texto), `hay algo con forma de llave privada en ${donde}`)
   }
 })

@@ -1,3 +1,10 @@
+// tests/invariantes.test.js
+//
+// Fourteen invariants, checked over generated payrolls rather than one example.
+// An example test says "with this payroll, that happens"; an invariant says
+// "with **any** payroll, that cannot happen". These are the claims the README
+// makes in prose, written as executable code.
+
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -12,27 +19,20 @@ import { abrirSesion } from '../src/wdk/session.js'
 import { correr } from '../src/run.js'
 
 /**
- * Invariantes del sistema.
- *
- * Un test de ejemplo dice "con esta nomina pasa esto". Un invariante dice "con
- * **cualquier** nomina no puede pasar aquello", y se comprueba sobre entradas
- * generadas. Son las afirmaciones que el README hace en prosa, escritas como
- * codigo ejecutable:
- *
- *   I1  la suma cuadra, siempre
- *   I2  nada se ejecuta fuera de la allowlist
- *   I3  nada se ejecuta por encima del tope por transferencia
- *   I4  lo ejecutado en el dia nunca supera el tope diario
- *   I5  toda denegacion nombra politica, regla y razon
- *   I6  toda fila no intentada declara por que
- *   I7  en dry-run no existe un txHash
- *   I8  los montos son enteros en unidades base, en string
- *   I9  el recibo nunca contiene la seed
- *   I10 la misma entrada produce el mismo recibo
- *   I11 bajar un tope nunca ejecuta mas
- *   I12 quitar a alguien de la allowlist nunca ejecuta mas
- *   I13 envenenar el texto no cambia ninguna decision (planner determinista)
- *   I14 el acumulado del ledger es exactamente lo ejecutado
+ *   I1  the sum always balances
+ *   I2  nothing executes off the allowlist
+ *   I3  nothing executes above the per-transfer cap
+ *   I4  the day's executed total never exceeds the daily cap
+ *   I5  every denial names a policy, a rule and a reason
+ *   I6  every not-attempted row states why
+ *   I7  a dry run has no txHash
+ *   I8  amounts are base-unit integers, as strings
+ *   I9  the receipt never contains the seed
+ *   I10 the same input produces the same receipt
+ *   I11 lowering a cap never executes more
+ *   I12 removing someone from the allowlist never executes more
+ *   I13 poisoning the text changes no decision (deterministic planner)
+ *   I14 the ledger accumulator is exactly what executed
  */
 
 const SEMILLA = Number(process.env.CERROJO_FUZZ_SEED ?? 20260822)
@@ -85,7 +85,7 @@ before(() => {
 
 after(() => rmSync(dir, { recursive: true, force: true }))
 
-/** Genera una nomina al azar: filas sanas, filas fuera de lista, filas rotas. */
+/** Generates a random payroll: sound rows, off-list rows, broken rows. */
 function nominaAlAzar (i) {
   const filas = [['beneficiario', 'direccion', 'monto', 'moneda', 'concepto']]
   const cuantas = 1 + entero(10)
@@ -145,7 +145,7 @@ describe('invariantes sobre nominas generadas', () => {
 
       assert.equal(recibo.failure, undefined, `${donde}: la corrida aborto`)
 
-      // I1 · la suma cuadra, y cubre exactamente las filas del CSV
+      // I1 · the sum balances, and covers exactly the rows of the CSV
       const { ejecutadas: e, denegadas: d, no_intentadas: n, lineas } = recibo.totals
       assert.equal(e + d + n, lineas, `${donde}: la suma no cuadra`)
       assert.equal(lineas, filasDeDatos, `${donde}: se perdieron o inventaron filas`)
@@ -158,33 +158,33 @@ describe('invariantes sobre nominas generadas', () => {
         assert.ok(['ejecutada', 'denegada', 'no_intentada'].includes(l.estado), `${donde}: estado desconocido ${l.estado}`)
 
         if (l.estado === 'ejecutada') {
-          // I2 · nada se ejecuta fuera de la allowlist
+          // I2 · nothing executes off the allowlist
           assert.ok(EN_LISTA.map((a) => a.toLowerCase()).includes(String(l.to).toLowerCase()), `${donde}: ejecuto hacia ${l.to}`)
-          // I3 · nada se ejecuta por encima del tope por transferencia
+          // I3 · nothing executes above the per-transfer cap
           assert.ok(BigInt(l.amount) <= cfg.capTx, `${donde}: ejecuto ${l.amount} sobre un tope de ${cfg.capTx}`)
-          // I7 · en dry-run no hay hash
+          // I7 · a dry run has no hash
           assert.equal(l.txHash, null, `${donde}: dry-run con txHash`)
           assert.equal(l.dryRun, true, donde)
           sumaEjecutada += BigInt(l.amount)
         }
 
-        // I5 · toda denegacion nombra politica, regla y razon
+        // I5 · every denial names a policy, a rule and a reason
         if (l.estado === 'denegada') {
           assert.ok(l.policy?.id && l.policy?.rule && l.policy?.reason, `${donde}: denegacion sin traza en fila ${l.row}`)
         }
 
-        // I6 · toda fila no intentada declara por que
+        // I6 · every not-attempted row states why
         if (l.estado === 'no_intentada') {
           assert.ok(typeof l.why === 'string' && l.why.length > 10, `${donde}: no_intentada sin razon en fila ${l.row}`)
         }
 
-        // I8 · los montos son enteros en unidades base, en string
+        // I8 · amounts are base-unit integers, as strings
         if (l.amount !== null && l.amount !== undefined) {
           assert.match(String(l.amount), /^\d+$/, `${donde}: monto no entero en fila ${l.row}`)
         }
       }
 
-      // I4 · lo ejecutado en el dia nunca supera el tope diario
+      // I4 · the day's executed total never exceeds the daily cap
       assert.ok(sumaEjecutada <= cfg.capDay, `${donde}: ejecuto ${sumaEjecutada} sobre un tope diario de ${cfg.capDay}`)
       assert.equal(recibo.totals.montoEjecutado, sumaEjecutada.toString(), `${donde}: el total ejecutado no coincide con la suma de las lineas`)
     }
@@ -220,7 +220,7 @@ describe('invariantes sobre nominas generadas', () => {
   })
 
   test('I11 · bajar el tope por transferencia nunca ejecuta mas', async () => {
-    // El tope diario se sube fuera de juego para aislar el efecto de un solo tope.
+    // The daily cap is raised out of play to isolate the effect of a single cap.
     const alto = config({ CERROJO_CAP_TX: '500000000', CERROJO_CAP_DAY: '999999999999999' })
     const bajo = config({ CERROJO_CAP_TX: '100000000', CERROJO_CAP_DAY: '999999999999999' })
 
@@ -260,7 +260,7 @@ describe('invariantes sobre nominas generadas', () => {
       const { ruta, filas } = nominaAlAzar(5000 + i)
       const original = await corrida(ruta, cfg)
 
-      // Las mismas filas, con TODOS los conceptos reemplazados por texto de ataque.
+      // The same rows, with EVERY description replaced by attack text.
       const envenenadas = [filas[0], ...filas.slice(1).map((fila) => [...fila.slice(0, 4), de(VENENOS)])]
       const atacado = await corrida(escribirCSV(envenenadas, `envenenado-${i}.csv`), cfg)
 

@@ -1,9 +1,12 @@
+// src/ingest/amount.js
+//
+// Amount handling, and the one rule it exists to enforce: never a float, never a
+// plausible guess. An amount that cannot be read with certainty comes back as a
+// stated problem rather than a number, and the row it came from ends up
+// `no_intentada` instead of being paid something approximate.
+
 /**
- * Normalizacion de montos a enteros en unidades base.
- *
- * Regla del proyecto: nunca floats, nunca un valor plausible. Si el monto no se
- * puede leer con certeza, se devuelve un problema con razon y la fila termina
- * como `no_intentada`.
+ * Normalises amounts to integers in base units.
  */
 
 export const PROBLEMAS = {
@@ -14,8 +17,8 @@ export const PROBLEMAS = {
 }
 
 /**
- * @param {string} texto - El monto tal como venia en el CSV.
- * @param {number} decimals - Decimales del token.
+ * @param {string} texto - The amount exactly as it came in the CSV.
+ * @param {number} decimals - The token decimals.
  * @returns {{ ok: true, base: bigint } | { ok: false, codigo: string, why: string }}
  */
 export function normalizarMonto (texto, decimals) {
@@ -31,7 +34,7 @@ export function normalizarMonto (texto, decimals) {
   const tienePunto = limpio.includes('.')
 
   if (tieneComa && tienePunto) {
-    // "1.234,56" -> punto de miles, coma decimal. "1,234.56" -> al reves.
+    // "1.234,56" -> dot for thousands, comma for decimals. "1,234.56" -> the reverse.
     limpio = limpio.lastIndexOf(',') > limpio.lastIndexOf('.')
       ? limpio.replace(/\./g, '').replace(',', '.')
       : limpio.replace(/,/g, '')
@@ -62,7 +65,7 @@ export function normalizarMonto (texto, decimals) {
   return { ok: true, base }
 }
 
-/** Entero en unidades base -> texto legible con sus decimales. Solo para mostrar. */
+/** Base-unit integer -> readable text with its decimals. For display only. */
 export function formatearMonto (base, decimals) {
   const n = BigInt(base)
   const divisor = 10n ** BigInt(decimals)

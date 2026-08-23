@@ -1,17 +1,20 @@
+// src/policy/ledger.js
+//
+// The daily accumulator behind the daily cap. It exists as its own object
+// because WDK cannot be asked to keep this state — see the finding below — so
+// the policy conditions read it through a closure. It remembers how much was
+// spent; the policy is still the thing that decides.
+
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
- * Acumulador diario del tope.
- *
- * ⚠️ Hallazgo del codigo de @tetherto/wdk 1.0.0-beta.16: el campo `onSuccess` del
- * esquema de politicas esta declarado pero **ignorado en runtime**
+ * Finding, read out of @tetherto/wdk 1.0.0-beta.16: the `onSuccess` field of the
+ * policy schema is declared but **ignored at runtime**
  * (`src/policy/policy-engine.js`: "Reserved for future use; currently ignored").
- * El acumulado no puede delegarse a la libreria: lo lleva este objeto, que las
- * condiciones leen por closure — la via que el README de WDK documenta
- * ("conditions ... may carry user-owned state via closures").
- *
- * Quien decide sigue siendo la politica. Este objeto solo recuerda cuanto se gasto.
+ * The accumulator therefore cannot be delegated to the library. It lives in this
+ * object, which the conditions read through a closure — the route the WDK README
+ * documents ("conditions ... may carry user-owned state via closures").
  */
 export class LedgerDiario {
   constructor ({ dir, network, fecha = hoyUTC(), persistir = true }) {
@@ -36,7 +39,7 @@ export class LedgerDiario {
       this.gastado = BigInt(datos.gastado ?? '0')
       this.movimientos = datos.movimientos ?? []
     } catch {
-      // Un ledger corrupto se trata como 0 gastado: el tope queda mas estricto, nunca mas laxo.
+      // A corrupt ledger counts as 0 spent: the cap gets stricter, never looser.
       this.gastado = 0n
       this.movimientos = []
     }
@@ -53,7 +56,7 @@ export class LedgerDiario {
     }, null, 2))
   }
 
-  /** Cuanto quedaria gastado si se ejecutara `amount`. Puro, no muta. */
+  /** What the total would be if `amount` executed. Pure, mutates nothing. */
   proyectado (amount) {
     return this.gastado + BigInt(amount)
   }
@@ -63,7 +66,7 @@ export class LedgerDiario {
     return r > 0n ? r : 0n
   }
 
-  /** Se llama SOLO cuando una linea se ejecuto (o se simulo como ejecutable). */
+  /** Called ONLY when a line executed, or simulated as executable. */
   registrar ({ amount, row, runId, dryRun }) {
     this.gastado += BigInt(amount)
     this.movimientos.push({ row, runId, amount: BigInt(amount).toString(), dryRun, at: new Date().toISOString() })

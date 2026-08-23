@@ -1,3 +1,10 @@
+// tests/unidad.test.js
+//
+// Unit tests: one pure function at a time, with no network, no WDK and no disk
+// except where the object under test is the one that writes (the ledger). The
+// behaviour of the system as a whole is asserted in the other files; this one
+// pins the contract of each piece separately, which is what allows changing them.
+
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -16,13 +23,6 @@ import { compararDeriva } from '../src/eval/inyeccion.js'
 import { E } from '../src/errors.js'
 import { nuevoRunId } from '../src/run.js'
 
-/**
- * Tests unitarios: una funcion pura por vez, sin red, sin WDK, sin disco salvo
- * donde el objeto bajo prueba es el que escribe (el ledger).
- *
- * Las pruebas de comportamiento del sistema estan en los otros archivos. Aqui se
- * fija el contrato de cada pieza por separado, que es lo que permite cambiarlas.
- */
 
 describe('normalizarMonto', () => {
   const casos = [

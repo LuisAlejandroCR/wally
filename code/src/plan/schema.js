@@ -1,8 +1,14 @@
+// src/plan/schema.js
+//
+// What a planner is allowed to produce, and nothing beyond it. The schema is the
+// boundary the model output has to fit through before any of it counts as a
+// plan, which is what keeps a talkative answer from turning into an instruction.
+
 import { z } from 'zod'
 
 export const DIRECCION_EVM = /^0x[0-9a-fA-F]{40}$/
 
-/** Lo que el planner tiene derecho a producir. Nada mas. */
+/** What the planner has the right to produce. Nothing else. */
 export const EsquemaLineaPlan = z.object({
   row: z.number().int().positive(),
   to: z.string().regex(DIRECCION_EVM),
@@ -10,8 +16,8 @@ export const EsquemaLineaPlan = z.object({
   decimals: z.number().int().nonnegative(),
   token: z.string().min(1),
   network: z.string().min(1),
-  // `reason` es del planner (por que propone esta fila). `concepto` es el texto
-  // del CSV, tal cual: es DATO, y tiene que llegar al recibo aunque venga envenenado.
+  // `reason` belongs to the planner (why it proposes this row). `concepto` is the
+  // CSV text as it stands: it is DATA, and has to reach the receipt even poisoned.
   reason: z.string().min(1),
   concepto: z.string().optional()
 })
@@ -29,7 +35,7 @@ export const EsquemaPlan = z.object({
   abstentions: z.array(EsquemaAbstencion)
 })
 
-/** Lo que se le pide al modelo: filas y razones. Nunca la seed, el origen ni el saldo. */
+/** What the model is asked for: rows and reasons. Never the seed, source or balance. */
 export const EsquemaPropuestaLLM = z.object({
   intent: z.string(),
   period: z.string(),

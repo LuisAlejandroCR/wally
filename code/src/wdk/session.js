@@ -1,3 +1,10 @@
+// src/wdk/session.js
+//
+// Opens a WDK session with the policies already registered, which is the only
+// way the rest of the codebase is allowed to get an account. The seed arrives as
+// an argument, is used to build the instance, and is never stored on anything
+// that gets serialised or printed.
+
 import WDK, { PolicyViolationError, PolicyConfigurationError } from '@tetherto/wdk'
 import WalletManagerEvm from '@tetherto/wdk-wallet-evm'
 
@@ -7,10 +14,8 @@ import { E } from '../errors.js'
 export { PolicyViolationError, PolicyConfigurationError }
 
 /**
- * Abre una sesion de WDK con las politicas ya puestas.
- *
- * La seed entra por argumento, se usa para construir la instancia y no se guarda
- * en ningun objeto que se serialice ni se imprima.
+ * Registering the policies before handing back an account is what makes the
+ * write path unreachable without them.
  */
 export async function abrirSesion ({ seed, cfg, ledger, allowlist, conDemo = false }) {
   if (!WDK.isValidSeed(seed)) throw E.seedInvalida()
@@ -35,16 +40,16 @@ export async function abrirSesion ({ seed, cfg, ledger, allowlist, conDemo = fal
 
   wdk.registerPolicy(politicas)
 
-  // Proxy con politicas: cualquier escritura denegada lanza PolicyViolationError.
+  // A policy Proxy: any denied write throws PolicyViolationError.
   const cuenta = await wdk.getAccount(cfg.network, 0)
   const tesoreria = await cuenta.getAddress()
 
-  // Copia de solo lectura de la misma cuenta: sirve para cotizar sin exponer escrituras.
+  // A read-only copy of the same account: quotes a fee without exposing a write.
   const cuentaSoloLectura = await cuenta.toReadOnlyAccount()
 
   let demo = null
   if (conDemo) {
-    // Cerrojo estructural: en este objeto el metodo de enviar no existe.
+    // The structural lock: on this object the send method does not exist.
     const plena = await wdk.getAccount(cfg.demo.network, 0)
     demo = { cuenta: await plena.toReadOnlyAccount(), cuentaPlena: plena, network: cfg.demo.network }
   }

@@ -1,9 +1,11 @@
-/**
- * Los chequeos deterministas del recibo.
- *
- * Ninguno usa la red ni el modelo. Si `suma_cuadra` es false, el recibo normal
- * no se emite: se degrada a recibo de fallo. Los otros tres se reportan.
- */
+// src/receipt/checks.js
+//
+// The four deterministic checks that run over every receipt. None of them uses
+// the network or the model. If `suma_cuadra` comes back false the normal receipt
+// is not issued at all and degrades to a failure receipt; the other three are
+// reported on the receipt for a reader to see.
+
+/** Each check returns `{ name, ok, detail }` and never throws. */
 export function correrChequeos ({ lineas, totales, allowlist }) {
   const permitidas = new Set(allowlist.map((a) => a.toLowerCase()))
 

@@ -1,3 +1,10 @@
+// src/api/server.js
+//
+// The HTTP API: the same pipeline again, this time for an interface. It exists
+// so a phone or web app reimplements nothing, and it inherits the property the
+// other surfaces have — there is no endpoint that executes live. It listens on
+// 127.0.0.1 unless told otherwise.
+
 import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -11,14 +18,11 @@ import { abrirSesion } from '../wdk/session.js'
 import { correr } from '../run.js'
 
 /**
- * API HTTP de Cerrojo: la misma tuberia, para una interfaz.
+ * It consumes exactly the same layers as the CLI and the MCP server, and keeps
+ * the same property: **no endpoint executes live**. Everything is dry-run.
  *
- * Existe para que una app (movil o web) no tenga que reimplementar nada: consume
- * exactamente las mismas capas que el CLI y el servidor MCP. Y hereda la misma
- * propiedad: **no hay endpoint que ejecute en vivo**. Todo es dry-run.
- *
- * Escucha en 127.0.0.1 por defecto. Para probar desde un telefono en la misma red,
- * arranca con CERROJO_API_HOST=0.0.0.0 — y solo en una red de confianza.
+ * To test from a phone on the same network, start it with
+ * CERROJO_API_HOST=0.0.0.0 — and only on a network you trust.
  */
 export function crearApi ({ cfg = cargarConfig() } = {}) {
   const rutas = [
@@ -31,7 +35,7 @@ export function crearApi ({ cfg = cargarConfig() } = {}) {
   ]
 
   const servidor = createServer(async (req, res) => {
-    // CORS abierto: la API solo escucha en local y no expone ninguna escritura.
+    // CORS is open: the API listens locally only and exposes no write at all.
     res.setHeader('access-control-allow-origin', '*')
     res.setHeader('access-control-allow-headers', 'content-type')
     res.setHeader('access-control-allow-methods', 'GET,POST,OPTIONS')
@@ -119,8 +123,8 @@ async function estadoDiario ({ cfg }) {
 }
 
 async function simular ({ cfg, cuerpo }) {
-  // Entrada validada antes de tocar nada: un monto ilegible es un error del
-  // llamante, no un 500 nuestro.
+  // Input is validated before anything is touched: an unreadable amount is the
+  // caller being wrong, not a 500 of ours.
   const destinatario = String(cuerpo.destinatario ?? '')
   const montoBase = String(cuerpo.monto_base ?? '')
 

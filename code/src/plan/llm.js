@@ -1,3 +1,10 @@
+// src/plan/llm.js
+//
+// The planner that uses a model, and the only layer an LLM enters at all. It
+// gets the instruction and the CSV rows, and nothing else: no seed, no source
+// address, no balance, no caps. Whatever it proposes is checked row by row
+// against the CSV before it becomes a plan.
+
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 
@@ -24,12 +31,10 @@ Reglas que no puedes romper:
    resultado correcto; inventar no lo es.`
 
 /**
- * Planner con modelo. Unica capa donde entra el LLM.
- *
- * Lo que el modelo recibe: la instruccion y las filas del CSV.
- * Lo que el modelo NO recibe: la seed, la direccion de origen, el saldo, los topes.
- * Lo que el modelo produce: una propuesta que el codigo verifica fila por fila contra el CSV
- * antes de convertirla en un plan. Una discrepancia no se corrige: se abstiene.
+ * What the model receives: the instruction and the CSV rows.
+ * What the model does NOT receive: the seed, the source address, the balance, the caps.
+ * What the model produces: a proposal the code verifies row by row against the
+ * CSV before turning it into a plan. A discrepancy is not corrected — it abstains.
  */
 export async function planificarConLLM ({ instruccion, nomina, cfg, periodo, cliente = null }) {
   if (!cfg.planner.apiKey && !process.env.ANTHROPIC_API_KEY) {
@@ -48,7 +53,7 @@ export async function planificarConLLM ({ instruccion, nomina, cfg, periodo, cli
   let intentos = 0
   let ultimoError = null
 
-  // Un reintento, y despues abstencion. Nunca un tercer intento "a ver si sale".
+  // One retry, then abstention. Never a third attempt to see if it works out.
   while (intentos < 2 && propuesta === null) {
     intentos++
     try {
@@ -70,7 +75,7 @@ export async function planificarConLLM ({ instruccion, nomina, cfg, periodo, cli
   }
 
   if (propuesta === null) {
-    // Sin propuesta valida no se inventa un plan: se abstiene todo, con razon.
+    // With no valid proposal no plan is invented: everything abstains, with a reason.
     return {
       plan: EsquemaPlan.parse({
         intent: 'pagar_nomina',
@@ -101,9 +106,9 @@ export async function planificarConLLM ({ instruccion, nomina, cfg, periodo, cli
 }
 
 /**
- * Verificacion: la propuesta del modelo se contrasta fila por fila con el CSV.
- * Los valores que valen son los del CSV, nunca los del modelo. Toda discrepancia
- * es una abstencion con razon nombrada, no una correccion silenciosa.
+ * Verification: the proposal is checked row by row against the CSV. The values
+ * that count are the ones in the CSV, never the ones from the model. Every
+ * discrepancy is an abstention with a named reason, not a silent correction.
  */
 export function verificarPropuesta ({ propuesta, nomina, cfg }) {
   const porFila = new Map(nomina.lineas.map((l) => [l.row, l]))
@@ -115,7 +120,7 @@ export function verificarPropuesta ({ propuesta, nomina, cfg }) {
     const fila = porFila.get(item.row)
 
     if (!fila) {
-      // El modelo propuso una fila que no existe. No se ejecuta, y queda dicho.
+      // The model proposed a row that does not exist. It does not run, and it is said so.
       abstentions.push({
         row: nomina.lineas[0]?.row ?? 1,
         why: `El planner propuso una fila ${item.row} que no existe en el CSV. Propuesta descartada.`
@@ -161,7 +166,7 @@ export function verificarPropuesta ({ propuesta, nomina, cfg }) {
       token: cfg.token.symbol,
       network: cfg.network,
       reason: (item.reason || fila.concepto || 'sin concepto declarado').slice(0, 200),
-      // El concepto del CSV viaja intacto aunque el planner escriba su propia razon.
+      // The CSV description travels intact even when the planner writes its own reason.
       concepto: fila.concepto
     })
   }
@@ -173,7 +178,7 @@ export function verificarPropuesta ({ propuesta, nomina, cfg }) {
     abstentions.push({ row: fila.row, why: (item.why || 'El planner se abstuvo sin declarar razon.').slice(0, 300), concepto: fila.concepto })
   }
 
-  // Una fila de la que el planner no dijo nada no se paga.
+  // A row the planner said nothing about does not get paid.
   for (const fila of nomina.lineas) {
     if (vistas.has(fila.row)) continue
     abstentions.push({

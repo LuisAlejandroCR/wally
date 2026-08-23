@@ -1,3 +1,10 @@
+// src/config.js
+//
+// Reads configuration out of the environment and touches neither the network nor
+// the seed. The seed is asked for separately, through leerSeed(), so that no
+// config object ever carries it around — which is what lets the rest of the code
+// log or serialise a config without thinking about it.
+
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,7 +13,7 @@ import { E } from './errors.js'
 
 export const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
-// Node >= 20.6 trae loadEnvFile. Sin .env el proceso sigue con los valores por defecto.
+// Node >= 20.6 ships loadEnvFile. With no .env the process carries on with defaults.
 try {
   const env = resolve(RAIZ, '.env')
   if (existsSync(env)) process.loadEnvFile(env)
@@ -24,10 +31,7 @@ function entero (valor, porDefecto) {
   return n
 }
 
-/**
- * Lee la configuracion del entorno. No toca la red ni la seed.
- * La seed se pide aparte, con leerSeed(), para que ningun objeto de config la lleve dentro.
- */
+/** Reads configuration from the environment. Touches neither network nor seed. */
 export function cargarConfig (overrides = {}) {
   const env = { ...process.env, ...overrides }
 
@@ -42,8 +46,8 @@ export function cargarConfig (overrides = {}) {
     capTx: entero(env.CERROJO_CAP_TX, '500000000'),
     capDay: entero(env.CERROJO_CAP_DAY, '1500000000'),
     allowlistPath: ruta(env.CERROJO_ALLOWLIST, './evals/fixtures/allowlist.txt'),
-    // Los CSV de ejemplo viven en evals/fixtures/ y SI estan en el repo: son sinteticos y
-    // hacen reproducible el eval. code/data/ queda para nominas reales, y esta gitignorado.
+    // The sample CSVs live in evals/fixtures/ and ARE in the repo: they are synthetic
+    // and make the eval reproducible. code/data/ is for real payrolls, and is gitignored.
     csvPorDefecto: ruta(env.CERROJO_CSV, './evals/fixtures/nomina_agosto.csv'),
     demo: {
       network: env.CERROJO_DEMO_NETWORK ?? 'polygon',
@@ -63,7 +67,7 @@ export function cargarConfig (overrides = {}) {
   return cfg
 }
 
-/** La seed vive en una variable y no entra a ningun objeto que se serialice. */
+/** The seed lives in a variable and enters no object that gets serialised. */
 export function leerSeed (env = process.env) {
   const seed = env.CERROJO_SEED
   if (!seed || !seed.trim()) throw E.seedAusente()

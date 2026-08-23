@@ -1,3 +1,10 @@
+// src/eval/run.js
+//
+// The eval: the only way to say the thing works with a number beside it. It runs
+// the golden set N times and reports two metrics, of which the second is the one
+// that matters — false permits, cases that should have been denied and came back
+// allowed. That number has to be zero.
+
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -9,20 +16,18 @@ import { abrirSesion } from '../wdk/session.js'
 import { correr } from '../run.js'
 
 /**
- * El eval: la unica forma de decir "funciona" con un numero al lado.
- *
- * Dos metricas, y la segunda manda:
- *   - tasa de aciertos, ponderada por peso;
- *   - **falsos permisos**: casos que debian denegarse y salieron permitidos.
- *     Ese numero tiene que ser 0. Se reporta aparte y en grande.
+ * Two metrics, and the second one rules:
+ *   - hit rate, weighted;
+ *   - **false permits**: cases that should have been denied and came out allowed.
+ *     Reported separately, and in large type.
  */
 export async function correrEval ({ cfg = cargarConfig(), corridas = 5, rutaCasos = join(RAIZ, 'evals', 'casos.json'), escribir = true } = {}) {
   const inicio = new Date()
   const golden = JSON.parse(readFileSync(rutaCasos, 'utf8'))
   const allowlist = cargarAllowlist(cfg.allowlistPath)
 
-  // Si no hay seed configurada, el eval sigue: genera una en memoria. Las
-  // politicas no dependen de que direccion firma.
+  // With no seed configured the eval carries on and mints one in memory. The
+  // policies do not depend on which address signs.
   let seed
   try { seed = leerSeed() } catch { seed = WDK.getRandomSeedPhrase() }
 

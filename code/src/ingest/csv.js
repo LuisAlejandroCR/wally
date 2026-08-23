@@ -1,3 +1,10 @@
+// src/ingest/csv.js
+//
+// Reads a payroll CSV into typed rows, with no dependencies. A row that fails to
+// parse never aborts the run: it comes out carrying a problem and ends up as
+// `no_intentada` in the receipt with its reason. The description column is data
+// throughout, however it reads.
+
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 
@@ -13,7 +20,7 @@ export const PROBLEMAS_FILA = {
 
 const CABECERA = ['beneficiario', 'direccion', 'monto', 'moneda', 'concepto']
 
-/** Parser de CSV con soporte de comillas dobles. Sin dependencias. */
+/** A CSV parser with double-quote support. No dependencies. */
 export function parsearCSV (texto) {
   const filas = []
   let campo = ''
@@ -43,10 +50,10 @@ export function parsearCSV (texto) {
 }
 
 /**
- * Lee un CSV de nomina y devuelve filas tipadas.
+ * Reads a payroll CSV and returns typed rows.
  *
- * Una fila que no parsea NO aborta la corrida: sale con `problema` y termina
- * como `no_intentada` en el recibo, con su razon.
+ * A row that does not parse does NOT abort the run: it comes out with `problema`
+ * and ends as `no_intentada` in the receipt, with its reason.
  */
 export function leerNomina (rutaArchivo, { token }) {
   if (!existsSync(rutaArchivo)) throw E.csvIlegible(rutaArchivo, 'el archivo no existe')
@@ -60,8 +67,8 @@ export function leerNomina (rutaArchivo, { token }) {
 
   const sha256 = createHash('sha256').update(texto).digest('hex')
 
-  // Excel en Windows guarda con BOM. Sin quitarlo, la primera columna se llama
-  // "﻿beneficiario" y el archivo entero se rechaza por cabecera invalida.
+  // Excel on Windows saves with a BOM. Without stripping it the first column is
+  // named "﻿beneficiario" and the whole file is rejected as a bad header.
   const filas = parsearCSV(texto.charCodeAt(0) === 0xFEFF ? texto.slice(1) : texto)
 
   if (filas.length === 0) throw E.csvIlegible(rutaArchivo, 'el archivo esta vacio')
@@ -84,7 +91,7 @@ export function leerNomina (rutaArchivo, { token }) {
       direccion: valor('direccion'),
       montoCrudo: valor('monto'),
       moneda: valor('moneda'),
-      // El concepto es DATO. Puede traer texto envenenado y nunca se ejecuta.
+      // The description is DATA. It can carry poisoned text and is never executed.
       concepto: valor('concepto'),
       amount: null,
       problema: null
@@ -121,12 +128,12 @@ export function leerNomina (rutaArchivo, { token }) {
 }
 
 /**
- * Marca las filas exactamente repetidas (mismo destinatario, mismo monto, mismo
- * concepto). La segunda no se paga: sale como `no_intentada` con su razon.
+ * Flags exactly repeated rows (same recipient, same amount, same description).
+ * The second one is not paid: it comes out as `no_intentada` with its reason.
  *
- * Un CSV pegado dos veces es el error de nomina mas comun y el mas caro. Pagarlo
- * "porque el archivo lo decia" es justo lo que este proyecto no hace; abstenerse
- * y decir por que deja la decision en manos de una persona.
+ * A CSV pasted twice is the most common payroll mistake and the most expensive.
+ * Paying it "because the file said so" is precisely what this project does not
+ * do; abstaining and saying why leaves the decision with a person.
  */
 function marcarDuplicadas (lineas) {
   const vistas = new Map()

@@ -1,3 +1,10 @@
+// src/run.js
+//
+// One complete run, and the order the whole project argues for:
+// ingest -> plan -> policy -> execute -> receipt. Whatever happens, a receipt
+// comes out — if the run falls over it is a failure receipt carrying the error
+// code and its suggested fix, with the three states still adding up.
+
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -14,12 +21,7 @@ export function nuevoRunId (d = new Date()) {
   return `run_${d.toISOString().replace(/[:.]/g, '-').slice(0, 19)}Z`
 }
 
-/**
- * Una corrida completa: ingest -> plan -> policy -> execute -> receipt.
- *
- * Pase lo que pase, sale un recibo. Si la corrida se cae, sale un recibo de fallo
- * con el codigo de error, su arreglo sugerido, y la suma cuadrando igual.
- */
+/** ingest -> plan -> policy -> execute -> receipt. Always ends in a receipt. */
 export async function correr ({
   csv,
   instruccion = 'paga la nomina',
@@ -74,7 +76,7 @@ export async function correr ({
       panelMainnet: panel
     })
 
-    // La suma que no cuadra es un bug de bloqueo: el recibo se degrada a fallo.
+    // A sum that does not balance is a blocking bug: the receipt degrades to a failure.
     if (!recibo.totals.cuadra) {
       const fallo = reciboDeFallo({
         runId,

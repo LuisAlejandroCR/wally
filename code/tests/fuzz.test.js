@@ -1,3 +1,10 @@
+// tests/fuzz.test.js
+//
+// Fuzzing of the pure layers. It is not looking for the system to be right; it
+// is looking for it not to break **unsafely** on input nobody typed by hand. An
+// amount parser that throws on a strange string takes down a whole payroll; one
+// that returns a plausible number on a strange string overpays.
+
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -15,15 +22,8 @@ import { CerrojoError } from '../src/errors.js'
 import { abrirSesion } from '../src/wdk/session.js'
 
 /**
- * Fuzz de las capas puras.
- *
- * No busca que el sistema acierte: busca que **no se rompa de forma insegura**
- * ante una entrada que nadie escribio a mano. Un parser de montos que lanza ante
- * una cadena rara tumba una nomina entera; uno que devuelve un numero plausible
- * ante una cadena rara paga de mas. Las dos cosas se prueban aqui.
- *
- * La semilla se imprime en cada corrida y se puede fijar con CERROJO_FUZZ_SEED
- * para reproducir un fallo exacto.
+ * The seed is printed on every run and can be pinned with CERROJO_FUZZ_SEED to
+ * reproduce an exact failure.
  */
 
 const SEMILLA = Number(process.env.CERROJO_FUZZ_SEED ?? Math.floor(Math.random() * 2 ** 31))
@@ -31,7 +31,7 @@ const ITER = Number(process.env.CERROJO_FUZZ_ITER ?? 400)
 
 console.log(`[fuzz] semilla ${SEMILLA} · ${ITER} iteraciones · reproducir con CERROJO_FUZZ_SEED=${SEMILLA}`)
 
-/** PRNG determinista (mulberry32): mismo seed, misma corrida. */
+/** A deterministic PRNG (mulberry32): same seed, same run. */
 function prng (semilla) {
   let a = semilla >>> 0
   return () => {
@@ -44,7 +44,7 @@ function prng (semilla) {
 
 const CARACTERES = [...'0123456789.,-+ eE_$ºñÑ¥€\t"\'abcXYZ()[]{}·а ']
 
-/** JSON.stringify se cae con BigInt, y los montos lo son. */
+/** JSON.stringify chokes on BigInt, and amounts are BigInt. */
 const legible = (x) => JSON.stringify(x, (_k, v) => (typeof v === 'bigint' ? `${v}n` : v))
 
 function crearGenerador (semilla) {
@@ -87,7 +87,7 @@ function crearGenerador (semilla) {
 
 const g = crearGenerador(SEMILLA)
 
-/** Serializador CSV correcto, para probar el parser contra su inversa. */
+/** A correct CSV serialiser, to test the parser against its inverse. */
 function serializarCSV (filas) {
   return filas.map((fila) => fila.map((campo) => (
     /[",\n]/.test(campo) ? `"${campo.replace(/"/g, '""')}"` : campo
@@ -153,7 +153,7 @@ describe('fuzz · parsearCSV', () => {
       const columnas = 1 + g.entero(6)
       const filas = Array.from({ length: 1 + g.entero(5) }, () => (
         Array.from({ length: columnas }, () => g.cadena(10).replace(/\r/g, ''))
-      // Una fila cuyos campos son todos espacios se descarta por diseno: se excluye del round-trip.
+      // A row whose fields are all spaces is dropped by design: excluded from the round-trip.
       )).filter((fila) => fila.some((c) => c.trim() !== ''))
 
       if (filas.length === 0) continue
@@ -201,7 +201,7 @@ describe('fuzz · leerNomina', () => {
       try {
         nomina = leerNomina(ruta, { token })
       } catch (err) {
-        // Solo se admite fallar con un error tipado que traiga su arreglo.
+        // The only acceptable failure is a typed error carrying its fix.
         assert.ok(err instanceof CerrojoError, `error sin tipar: ${err.message}`)
         assert.ok(err.suggestion.length > 10)
         continue

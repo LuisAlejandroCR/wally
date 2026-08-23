@@ -1,3 +1,10 @@
+// tests/paridad.test.js
+//
+// Parity with the official CLI, asserted through a fake adapter so the whole
+// orchestration can be checked with no network and no keyring. What it counts is
+// which lines were handed over: a denied line reaching the CLI would be the one
+// result that breaks the argument.
+
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
@@ -24,7 +31,7 @@ const recibo = {
   ]
 }
 
-/** Adaptador falso: cuenta a quien se le entrego cada linea. Sin red, sin llavero. */
+/** A fake adapter: records which lines were handed over. No network, no keyring. */
 function adaptadorFalso ({ direccion = SDK } = {}) {
   const entregadas = []
   return {
@@ -53,7 +60,7 @@ describe('construirArgsSend', () => {
   })
 
   test('no hay parametro que quite --dry-run', () => {
-    // Se le pasan banderas hostiles; la funcion las ignora porque no las lee.
+    // Hostile flags are passed in; the function ignores them because it never reads them.
     const args = construirArgsSend({ network: 'sepolia', token: 'usdt', to: A, amount: '1', dryRun: false, live: true, confirmo: true })
     assert.ok(args.includes('--dry-run'))
     assert.ok(!args.includes('--live'))
@@ -136,7 +143,7 @@ describe('correrParidad', () => {
     assert.equal(p.fuga.row, 4)
     assert.equal(p.fuga.cliLaRefusoPorPolitica, false)
     assert.equal(p.fuga.reglaDelCerrojo, 'denegar-sobre-tope')
-    // Sigue siendo dry-run: la demostracion no envia nada.
+    // Still dry-run: the demonstration sends nothing.
     assert.ok(falso.entregadas.some((e) => e.to === B))
   })
 
@@ -146,8 +153,8 @@ describe('correrParidad', () => {
     assert.match(md, /@tetherto\/wdk-cli/)
     assert.match(md, /@tetherto\/wdk/)
     assert.match(md, /Coinciden byte a byte/)
-    // Lo concluyente no es la palabra "seed", que aparece en la prosa: es la
-    // *secuencia*. Cuatro palabras seguidas de una seed no caen juntas por azar.
+    // What is conclusive is not the word "seed", which appears in the prose: it is
+    // the *sequence*. Four consecutive seed words do not land together by chance.
     const palabras = SEED.split(/\s+/)
     for (let k = 0; k + 4 <= palabras.length; k++) {
       assert.ok(!md.includes(palabras.slice(k, k + 4).join(' ')), 'aparece una secuencia de la seed')

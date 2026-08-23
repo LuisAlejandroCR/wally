@@ -1,12 +1,13 @@
+// src/plan/rules.js
+//
+// The deterministic planner: no model, no network, no surprises. It exists
+// permanently and not merely as a fallback, because it is the proof that the
+// lock does not depend on an LLM — `cerrojo run` without `--llm` exercises the
+// entire system without switching a model on.
+
 import { EsquemaPlan } from './schema.js'
 
-/**
- * Planner determinista: sin modelo, sin red, sin sorpresas.
- *
- * Existe para siempre, no solo como respaldo: es la prueba de que el cerrojo no
- * depende del LLM. `cerrojo run` sin `--llm` corre todo el sistema sin encender
- * ningun modelo.
- */
+/** Reads the CSV, proposes every readable row, and abstains on the rest. */
 export function planificarPorReglas ({ instruccion, nomina, cfg, periodo }) {
   const lines = []
   const abstentions = []

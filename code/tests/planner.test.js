@@ -1,3 +1,10 @@
+// tests/planner.test.js
+//
+// The planner held to its one promise: whatever the model answers is re-checked
+// row by row against the CSV before it becomes a plan. A rewritten amount or a
+// swapped address has to come out as an abstention with a named reason, never as
+// a silent correction. The client is faked, so no network is involved.
+
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -10,7 +17,7 @@ import { planificarPorReglas } from '../src/plan/rules.js'
 const cfg = cargarConfig({ ANTHROPIC_API_KEY: 'clave-de-prueba' })
 const nomina = leerNomina(join(RAIZ, 'evals', 'fixtures', 'nomina_agosto.csv'), { token: cfg.token })
 
-/** Cliente falso: devuelve la propuesta que le pasemos, sin tocar la red. */
+/** A fake client: returns whatever proposal it is given, without touching the network. */
 const clienteQueDevuelve = (parsed) => ({
   messages: { parse: async () => ({ parsed_output: parsed, stop_reason: 'end_turn' }) }
 })
@@ -49,8 +56,8 @@ test('un monto inventado por el planner no se corrige: se abstiene', () => {
 
 test('una direccion cambiada por el planner no llega al plan', () => {
   const p = propuestaHonesta()
-  // La fila 8 del CSV ya lleva 0x...dEaD de forma legitima: a la politica le toca denegarla.
-  // Aqui se prueba otra cosa: que el planner no pueda *cambiar* el destino de una fila.
+  // Row 8 of the CSV legitimately carries 0x...dEaD: denying it is the policy's job.
+  // What is tested here is different — that the planner cannot *change* a recipient.
   p.incluidas[1].to = '0x00000000000000000000000000000000BadC0de0'
 
   const { lines, abstentions } = verificarPropuesta({ propuesta: p, nomina, cfg })

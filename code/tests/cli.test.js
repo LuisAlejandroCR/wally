@@ -1,3 +1,10 @@
+// tests/cli.test.js
+//
+// Spawns the real CLI as a subprocess, because the guarantees worth checking are
+// the ones a person gets at a terminal: --live without --confirmo exits 1 and
+// pays nothing, a receipt printed as JSON balances, policy works with no seed and
+// no network, and a missing CSV exits 1 with a typed code instead of a trace.
+
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
@@ -8,7 +15,7 @@ import { entorno } from './semilla.js'
 
 const CLI = join(RAIZ, 'src', 'cli.js')
 
-/** Corre el CLI de verdad, sin red y con el estado del dia en un directorio aparte. */
+/** Runs the real CLI, with no network and the day's state in a directory of its own. */
 function cerrojo (...args) {
   return spawnSync(process.execPath, [CLI, ...args], {
     cwd: RAIZ,

@@ -1,3 +1,10 @@
+// tests/semilla.js
+//
+// The ephemeral testnet seed shared by every test that crosses a process
+// boundary. It is minted in memory, dies with the test process, is never written
+// to disk and never touches a single fund — the tests that use it cannot send,
+// because the surfaces they drive have no way to.
+
 import { join } from 'node:path'
 
 import WDK from '@tetherto/wdk'

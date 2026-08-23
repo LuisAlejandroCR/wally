@@ -1,12 +1,15 @@
+// src/receipt/markdown.js
+//
+// The readable twin of the receipt, and the thing that goes on screen during the
+// demo. The "why" column carries the policy name, the rule name and the reason,
+// which is not a generated sentence but the real trace of the policy that
+// refused the line.
+
 import { formatearMonto } from '../ingest/amount.js'
 
 const ICONO = { ejecutada: '✅ ejecutada', denegada: '⛔ denegada', no_intentada: '⏸ no intentada' }
 
-/**
- * El gemelo legible del recibo. Es lo que se abre en pantalla durante la demo:
- * la columna "Por que" trae el nombre de la politica, el de la regla y su razon.
- * No es un parrafo generado — es la traza real de la politica que denego.
- */
+/** Markdown for people; recibo.json stays the machine contract beside it. */
 export function reciboMarkdown (recibo) {
   const d = recibo.totals?.decimals ?? 0
   const simbolo = (recibo.run?.token?.slug ?? '').toUpperCase() || 'TOKEN'
@@ -18,8 +21,8 @@ export function reciboMarkdown (recibo) {
   if (recibo.run.inputFile) L.push(`**Entrada:** \`${recibo.run.inputFile}\` · sha256 \`${(recibo.run.inputSha256 ?? '').slice(0, 16)}…\``)
   if (recibo.run.planner) {
     const p = recibo.run.planner
-    // El recibo nombra el planner que armo el plan (`rules` | `llm`), nunca una bandera del CLI:
-    // sigue siendo cierto aunque las banderas se renombren.
+    // The receipt names the planner that built the plan (`rules` | `llm`), never a
+    // CLI flag: it stays true even if the flags get renamed.
     const modo = p.modo ?? (p.used ? 'llm' : 'rules')
     const etiqueta = p.used ? `LLM \`${p.model}\`` : 'reglas deterministas'
     L.push(`**Planner:** \`${modo}\` · ${etiqueta}${p.retries ? ` · reintentos: ${p.retries}` : ''}`)

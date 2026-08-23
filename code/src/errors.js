@@ -1,4 +1,8 @@
-// Errores tipados: cada uno lleva su arreglo sugerido. Nunca una traza en la cara del usuario.
+// src/errors.js
+//
+// Typed errors, each one carrying its own suggested fix. Nothing in this project
+// puts a stack trace in front of a user: a failure is a code, a sentence about
+// what happened, and a sentence about what to do next.
 
 export class CerrojoError extends Error {
   constructor (code, message, suggestion, stage) {

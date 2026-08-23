@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+// src/cli.js
+//
+// The command line, and the only surface in the project that can actually send —
+// and only with `--live` and `--confirmo` given together. Every command here
+// reads the same five layers the MCP server and the HTTP API read, and none of
+// them re-decides anything the policy engine already decided.
+
 import { join } from 'node:path'
 
 import { RAIZ, cargarAllowlist, cargarConfig, leerSeed } from './config.js'
@@ -84,7 +91,7 @@ try {
     default: console.log(AYUDA)
   }
 } catch (err) {
-  // Error tipado con su arreglo, nunca una traza en la cara del usuario.
+  // A typed error with its fix, never a stack trace in front of a user.
   if (err?.code && err?.suggestion) {
     console.error(`\n⛔ ${err.code}: ${err.message}\n   ➜ ${err.suggestion}\n`)
     process.exit(1)
@@ -119,14 +126,14 @@ async function cmdRun () {
     if (dir) console.log(`\nRecibo escrito en ${dir}\n`)
   }
 
-  // Un recibo que no cuadra, o una corrida abortada, no salen con codigo 0.
+  // A receipt that does not balance, or an aborted run, does not exit 0.
   process.exit(recibo.failure || !recibo.totals.cuadra ? 1 : 0)
 }
 
 async function cmdParidad () {
   if (!cliDisponible()) throw errCliAusente()
 
-  // La misma corrida de siempre. La paridad no re-decide nada: lee el recibo.
+  // The same run as always. Parity re-decides nothing: it reads the receipt.
   const { recibo, tesoreria } = await correr({
     csv: valor('csv', cfg.csvPorDefecto),
     instruccion: valor('instruccion', 'paga la nomina de agosto'),

@@ -1,3 +1,10 @@
+// tests/api.test.js
+//
+// Drives the HTTP API on an ephemeral port and checks what a caller is actually
+// handed: a health endpoint that declares dry-run, a denial that names the
+// engine's own policy and rule, bad input coming back as a typed 400 rather than
+// a 500, and a receipt that balances with no transaction hash on any line.
+
 import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
 import { join } from 'node:path'
@@ -13,8 +20,9 @@ let base
 let seedPrevia
 
 before(async () => {
-  // La API abre la sesion por peticion y lee la seed del entorno, asi que aqui va y no en
-  // un argumento: el objeto de config no lleva la seed dentro, y eso no se toca por un test.
+  // The API opens a session per request and reads the seed from the environment, so
+  // it goes here and not in an argument: the config object does not carry the seed,
+  // and that is not going to be bent for a test.
   seedPrevia = process.env.CERROJO_SEED
   process.env.CERROJO_SEED = SEED
 
@@ -53,7 +61,7 @@ test('/politicas lista el cerrojo sin filtrar la allowlist ni un secreto', async
   assert.equal(r.politicas.length, 5)
   assert.equal(typeof r.destinatariosPermitidos, 'number')
   assert.ok(!JSON.stringify(r).match(/seed|mnemonic|private/i))
-  // La API dice cuantos destinatarios hay, no quienes son.
+  // The API says how many recipients there are, not who they are.
   assert.ok(!Array.isArray(r.allowlist))
 })
 
