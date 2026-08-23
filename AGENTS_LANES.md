@@ -20,7 +20,7 @@ good it looks on screen.
 
 | Lane | Owner | Directories | State |
 |---|---|---|---|
-| **A · Engine** | core agent | `code/src/{ingest,plan,policy,wdk,execute,receipt,eval}`, `code/tests`, `code/evals` | ✅ working — 38/38 tests, eval 20/20, false permits 0 |
+| **A · Engine** | core agent | `code/src/{ingest,plan,policy,wdk,execute,receipt,eval}`, `code/tests`, `code/evals` | ✅ working — 134/134 tests (unit, fuzz, invariants), eval 20/20, false permits 0 |
 | **B · Interfaces** | core agent | `code/src/cli.js`, `code/src/mcp/`, `code/src/api/`, `code/src/demo.js` | ✅ CLI + MCP + HTTP + `cerrojo demo` |
 | **C · App** | RN/web agent | `app/` | ⏳ P2 — only once A and B are frozen |
 | **D · Delivery** | human | `README.md`, video, DoraHacks submission | ⏳ |
@@ -87,7 +87,7 @@ The receipt is the other half of the contract: every line ends in exactly one of
 cd code && npm test && node src/cli.js eval --runs 5
 ```
 
-* `npm test` has to be green in full.
+* `npm test` has to be green in full. `npm run fuzz` re-runs only the generated-input suites.
 * `cerrojo eval` has to report **false permits: 0**. That number outranks every other number here.
 * If you touched anything the model reads or writes, also run `node src/cli.js inyeccion --runs 3`
   and check that dangerous drift is 0. It costs API calls, so it is not part of the default loop.

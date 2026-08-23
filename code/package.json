@@ -10,7 +10,8 @@
     "eval": "node src/cli.js eval",
     "doctor": "node src/cli.js doctor",
     "demo": "node src/cli.js demo",
-    "serve": "node src/cli.js serve"
+    "serve": "node src/cli.js serve",
+    "fuzz": "node --test tests/fuzz.test.js tests/invariantes.test.js"
   },
   "keywords": [],
   "author": "",

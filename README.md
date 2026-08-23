@@ -343,7 +343,11 @@ cd code
 npm test
 ```
 
-Six test files, 38 tests, all offline. They generate their own in-memory seed, point the RPC at a dead port, and keep their state out of the way of a real run.
+Nine test files, 134 tests, all offline. They generate their own in-memory seed, point the RPC at a dead port, and keep their state out of the way of a real run. Three kinds, and the distinction matters:
+
+* **Unit** — one function at a time, no I/O.
+* **Fuzz** — generated input against the pure layers, to find what nobody thought to type. The seed is printed on every run and can be pinned with `CERROJO_FUZZ_SEED=<n>` to reproduce a failure exactly.
+* **Invariants** — properties over randomly generated payrolls: not *"this payroll produces that"* but *"no payroll can produce this"*.
 
 * `tests/policy.test.js` — the Proxy is in place; each of the five policies allows and denies correctly with the RPC dead; `sendTransaction` and `approve` are default-denied; a denied live `transfer` throws `PolicyViolationError` carrying `policyId`.
 * `tests/recibo.test.js` — the three states sum to the total; every denial carries policy, rule and reason; **the poisoned CSV produces a receipt identical to the clean one**; a missing CSV yields a failure receipt rather than a stack trace; no receipt ever contains a seed word or anything shaped like a private key.
@@ -352,6 +356,11 @@ Six test files, 38 tests, all offline. They generate their own in-memory seed, p
 * `tests/cli.test.js` — spawns the real CLI: `--live` without `--confirmo` exits 1 and pays nothing, `run --json` emits a receipt that parses and balances, `policy` works with no seed and no network, a missing CSV exits 1 with a typed code and no stack trace, and a bare invocation prints the help.
 * `tests/api.test.js` — drives the HTTP API over a real server on an ephemeral port: `/salud` declares `dry-run`, `/politicas` reports the caps and the recipient count without leaking the allowlist or a secret, `/simular` denies an off-allowlist recipient with the engine's policy and rule, bad input comes back as a typed 400 rather than a 500, an unknown route returns 404 with the endpoint list, and `/correr` produces a dry-run receipt that balances with no transaction hash on any line.
 
+* `tests/unidad.test.js` — 70 unit tests over the pure pieces: amount normalization and its inverse, the CSV parser, the daily ledger (including a corrupt file reading as zero, so the cap gets stricter and never laxer), the policy definitions, the four receipt checks, the plan schema, the drift classifier, and every typed error carrying a suggested fix.
+* `tests/fuzz.test.js` — generated input: `normalizarMonto` never throws and never accepts a non-positive or over-precise amount; `parsear(serializar(rows))` round-trips; `leerNomina` gives every row either an integer amount or a stated problem, never both and never neither; the policy engine returns ALLOW or DENY for any argument — including malformed ones, which always come back DENY; and `reciboMarkdown` renders any receipt without throwing.
+* `tests/invariantes.test.js` — fourteen properties over generated payrolls. The totals always balance; nothing executes off the allowlist or over the per-transfer cap; the day's executed total never exceeds the daily cap; every denial names a policy, a rule and a reason; a dry-run never yields a transaction hash; the same input yields the same receipt; **lowering a cap or shortening the allowlist never executes more**; poisoning every description changes no decision; and what `simulate` says it will refuse, `transfer` actually throws — with the same policy and rule.
+
+These were checked against a mutant: inverting the allowlist condition in `policy/index.js` makes three invariant tests fail. A test suite that cannot fail is decoration.
 The eval is the number:
 
 ```bash
