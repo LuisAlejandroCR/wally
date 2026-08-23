@@ -133,8 +133,7 @@ async function cmdParidad () {
   if (bandera('json')) {
     console.log(JSON.stringify(paridad, null, 2))
   } else {
-    console.log(`
-${paridadMarkdown(paridad)}`)
+    console.log(`\n${paridadMarkdown(paridad)}`)
   }
 
   process.exit(paridad.cuadra ? 0 : 1)
