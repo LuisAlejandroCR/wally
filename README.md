@@ -154,7 +154,7 @@ The screen worth recording is **Compare clean against poisoned**: two real runs 
 
 ## Commands and flags
 
-Everything runs as `node src/cli.js <command>` from `code/`. A bare invocation prints the help. `package.json` also declares the bin names `cerrojo` and `cerrojo-mcp` if you prefer to link the package, and the scripts `npm test`, `npm run cerrojo`, `npm run eval`, `npm run doctor`, `npm run mcp`, `npm run demo` and `npm run serve`.
+Everything runs as `node src/cli.js <command>` from `code/`. A bare invocation prints the help. `package.json` also declares the bin names `cerrojo` and `cerrojo-mcp` if you prefer to link the package, and the scripts `npm test`, `npm run cerrojo`, `npm run eval`, `npm run doctor`, `npm run mcp`, `npm run demo`, `npm run paridad` and `npm run serve`.
 
 | Command | What it does |
 |---|---|
@@ -164,6 +164,7 @@ Everything runs as `node src/cli.js <command>` from `code/`. A bare invocation p
 | `policy` | print the active rules. No network, no seed needed |
 | `doctor` | check environment, allowlist, seed presence, treasury balance |
 | `serve` | start the local HTTP API |
+| `paridad` | run the payroll, then hand **only the approved lines** to Tether's own `wdk` CLI |
 | `demo` | the whole argument in six acts, one command |
 
 ```bash
@@ -178,6 +179,7 @@ node src/cli.js run --live --confirmo # the only path that can send. Both flags 
 
 node src/cli.js eval --runs 5 [--json]
 node src/cli.js inyeccion --runs 5 [--rapido]
+node src/cli.js paridad [--demostrar-fuga] [--json]
 node src/cli.js demo [--sin-red] [--rapido]
 node src/cli.js serve --puerto 8787 --host 127.0.0.1
 ```
@@ -194,7 +196,13 @@ Cerrojo is not a wrapper around one WDK call. The policy engine is the product; 
 
 **Accounts under policy are default-deny**, which came from reading the WDK source rather than assuming. Any operation WDK can intercept that has no matching `ALLOW` rule is refused with `no-applicable-rule`, and Cerrojo allows exactly one operation: `transfer`. So the classic ways around a transfer limit — raw ERC-20 calldata through `sendTransaction`, an unlimited `approve`, an off-chain Permit through `signTypedData`, an ERC-7702 `delegate` — are refused by construction rather than by a rule someone remembered to write. Four eval cases cover exactly those four detours.
 
-**Built on `@tetherto/wdk` directly rather than on `@tetherto/wdk-cli`.** That is a design choice, and what it buys is the paragraph above: the policy engine is reachable in-process, so a refusal is a verdict object returned by WDK with its policy, rule and reason attached, and every interface is a caller of that engine rather than a place where a decision is re-made.
+**The decision is made against `@tetherto/wdk` in-process, and `@tetherto/wdk-cli` is held to it.** Deciding in-process is what buys the paragraph above: the policy engine is reachable directly, so a refusal is a verdict object returned by WDK with its policy, rule and reason attached, and every interface is a caller of that engine rather than a place where a decision is re-made. Tether's own CLI is then wired in downstream, where `cerrojo paridad` answers three questions a judge can check in a minute:
+
+1. **Are they the same wallet?** `wdk get address --network sepolia` and the SDK's `account.getAddress()` derive the same treasury from the same seed. If they ever differ, the command exits non-zero.
+2. **What reaches the CLI?** Only lines the lock approved. Denied and not-attempted lines are never handed over — there is no code path that does it, and `tests/paridad.test.js` asserts it with a fake adapter that records every call.
+3. **Would the CLI have stopped them?** No. `--demostrar-fuga` hands one *denied* line to the bare CLI on purpose: it builds the same ERC-20 calldata for a 900 USDT payment that is 400 over the cap, and carries it to the node. The CLI has no cap and no allowlist — which is the whole reason the lock sits in front of it.
+
+`wdk send` is invoked with `--dry-run` hardcoded into the argument builder rather than passed as an option, so no caller can drop it.
 
 <!-- Permalinks are pinned to 0419f987980d181394714a609b73d3918f9845b8, an ancestor of main, and all ten line ranges were verified against the file contents at that SHA. -->
 
@@ -224,6 +232,7 @@ Requested in `code/package.json`, resolved in `code/package-lock.json`:
 |---|---|---|---|
 | `@tetherto/wdk` | `^1.0.0-beta.16` | `1.0.0-beta.16` | yes — `wdk/session.js`, `eval/run.js` |
 | `@tetherto/wdk-wallet-evm` | `^1.0.0-beta.17` | `1.0.0-beta.17` | yes — `wdk/session.js` |
+| `@tetherto/wdk-cli` | `^1.0.0-beta.3` | `1.0.0-beta.3` | yes — spawned by `wdk/cli.js` |
 | `@tetherto/wdk-wallet` | transitive | `1.0.0-beta.17` | no |
 | `@tetherto/wdk-failover-provider` | transitive | `1.0.0-beta.2` | no |
 | `@modelcontextprotocol/sdk` | `^1.30.0` | `1.30.0` | yes — `mcp/server.js` |
@@ -232,7 +241,7 @@ Requested in `code/package.json`, resolved in `code/package-lock.json`:
 
 Those are all of them. There is no CSV library, no HTTP framework and no test runner: the CSV parser, the HTTP API and the tests use Node's standard library.
 
-`@tetherto/wdk-cli` is **not** a dependency of this project and is not used at runtime. Cerrojo ships its own CLI and its own MCP server, both built directly on `@tetherto/wdk`.
+Cerrojo ships its own CLI and its own MCP server, both built directly on `@tetherto/wdk`. `@tetherto/wdk-cli` is a dependency as well, used by `cerrojo paridad` to hold the in-process engine and Tether's own CLI to the same wallet — never to make a decision.
 
 ---
 
@@ -283,7 +292,7 @@ Mainnet is read-only and locked twice: the account comes from `toReadOnlyAccount
 cd code && npm test
 ```
 
-Nine test files, **134 tests, all offline**. They generate their own in-memory seed, point the RPC at a dead port, and keep their state out of the way of a real run. Three kinds, and the distinction matters: **unit** (one function, no I/O), **fuzz** (generated input against the pure layers, to find what nobody thought to type — the seed is printed on every run and can be pinned with `CERROJO_FUZZ_SEED=<n>`), and **invariants** (properties over randomly generated payrolls: not *"this payroll produces that"* but *"no payroll can produce this"*).
+Ten test files, **151 tests, all offline**. They generate their own in-memory seed, point the RPC at a dead port, and keep their state out of the way of a real run. Three kinds, and the distinction matters: **unit** (one function, no I/O), **fuzz** (generated input against the pure layers, to find what nobody thought to type — the seed is printed on every run and can be pinned with `CERROJO_FUZZ_SEED=<n>`), and **invariants** (properties over randomly generated payrolls: not *"this payroll produces that"* but *"no payroll can produce this"*).
 
 | File | What it proves |
 |---|---|
@@ -296,6 +305,7 @@ Nine test files, **134 tests, all offline**. They generate their own in-memory s
 | `planner.test.js` | the model's proposal is re-checked row by row against the CSV; a rewritten amount or address becomes an abstention, never a silent correction |
 | `cli.test.js` | spawns the real CLI: `--live` without `--confirmo` exits 1 and pays nothing, `run --json` emits a receipt that balances, `policy` works with no seed and no network, a missing CSV exits 1 with a typed code |
 | `api.test.js` | drives the HTTP API on an ephemeral port: `/salud` declares `dry-run`, `/simular` denies an off-allowlist recipient with the engine's own policy and rule, bad input is a typed 400 rather than a 500, and `/correr` produces a receipt that balances with no transaction hash on any line |
+| `paridad.test.js` | `wdk send` is never built without `--dry-run`, whatever it is passed; only approved lines are handed to Tether's CLI, verified with a fake adapter that records every call; a different address breaks parity; and no label ever credits the CLI with a cap or an allowlist it does not have |
 
 These were checked against a mutant: inverting the allowlist condition in `policy/index.js` makes three invariant tests fail. A test suite that cannot fail is decoration.
 
@@ -352,10 +362,11 @@ The variance is the model deciding whether to propose row 8 at all. Either way i
 ## Limitations and observed failure modes
 
 * **No live payroll has ever been executed.** Dry run is the default and it is what the demo shows. The `--live --confirmo` path exists and is wired to `account.transfer`, but it has never been exercised against the chain, because the treasury holds no test USDT. Every refusal, verdict and receipt shown here is real; the sends are simulated.
+* **`cerrojo paridad` currently shows the CLI reverting on every line, and that is the funding, not a control.** With an unfunded treasury `wdk send --dry-run` fails gas estimation with `ERC20: transfer amount exceeds balance` for approved and denied lines alike. The report labels those as chain reverts rather than policy refusals, because that is what they are — a balance is not a limit. Fund the treasury and the approved lines quote a fee instead; the denied ones still never reach the CLI.
 * **Fee figures are estimates, not exact quotes.** `quoteTransfer` reverts from an unfunded account, so the fee falls back to `getFeeRates() × 65000 gas`. Every affected line is marked `quoteExacto: false` and carries the reason. An approximation is never presented as exact.
 * **The daily accumulator is ours, not WDK's.** Because `onSuccess` is inert in this beta, the counter is a JSON file under `code/state/`. It is per-machine and not safe against concurrent processes: two Cerrojo runs racing on the same machine could both pass the daily check.
 * **Receipts and daily state stay on the machine that ran them.** `code/runs/`, `code/state/` and `app/state/` are gitignored. The sample payrolls *are* committed, because they are synthetic; `code/data/` stays gitignored for real ones.
-* **`npm audit` on this project's dependency tree reports 0 vulnerabilities.** For completeness: during preflight we measured the separate `@tetherto/wdk-cli` beta tree and it reported 14 vulnerabilities, 8 high. `wdk-cli` is not a dependency here, so that tree is not installed by this project, and we did not attempt to blind-fix upstream beta packages during the event.
+* **`npm audit` reports 14 vulnerabilities (8 high, 2 moderate, 4 low), all of them inside the `@tetherto/wdk-cli` beta tree.** Measured, not estimated. The rest of the dependency tree — `@tetherto/wdk`, the EVM wallet, the MCP SDK, zod — reported 0 before `wdk-cli` was added, and the 535 packages it pulls in are the whole difference. `wdk-cli` is used only by `cerrojo paridad`; no decision depends on it, and nothing in the `run`, `eval` or `inyeccion` paths loads it. We did not blind-fix upstream beta packages during the event.
 * **One chain, one token, one account.** Multi-chain would have been four half-demos.
 * **The secret-leak test looks for sequences, not single words.** It generates a fresh BIP-39 seed on every run and sweeps `recibo.json`, `recibo.md` and the inspected object for it. Searching word by word was noise rather than detection: dozens of BIP-39 words are ordinary English that a payment receipt writes with every right — a run drew `dry` and the test reported a leak that did not exist, against the `dry` inside `dry-run`. What is conclusive is the sequence, so it now asserts that neither the full phrase nor any window of three consecutive seed words appears, plus 32-byte hex key material.
 * **The LLM planner is opt-in and needs an API key.** The default planner is deterministic, which is also the point: the entire system, including every refusal, runs with no model at all. `run --llm` requires `ANTHROPIC_API_KEY` and fails with a typed error without it. It has been exercised live against `claude-opus-5` — fourteen runs, valid schema on the first attempt every time, ~22 s per run, and the verification layer never had to reject a proposed address or amount — but fourteen runs is not an accuracy figure, so none is claimed. The main eval stays deterministic on purpose: 20 cases × 5 runs through a model would be 100 API calls per measurement.
@@ -372,13 +383,14 @@ code/
 │   ├── ingest/     CSV parsing and amount normalization to base units
 │   ├── plan/       deterministic planner, LLM planner, schema validation
 │   ├── policy/     the lock: WDK policy definitions and the daily ledger
-│   ├── wdk/        WDK session: wallet, policies, accounts
+│   ├── wdk/        WDK session (wallet, policies, accounts) and the wdk-cli adapter
 │   ├── execute/    simulate, quote, and only on demand send
 │   ├── receipt/    recibo.json + recibo.md + the four checks
 │   ├── eval/       golden set runner
 │   ├── api/        HTTP API
 │   ├── mcp/        MCP server
-│   ├── cli.js      run | eval | inyeccion | policy | doctor | serve | demo
+│   ├── cli.js      run | eval | inyeccion | policy | doctor | serve | paridad | demo
+│   ├── paridad.js  hands only approved lines to Tether's own wdk CLI, and reports
 │   ├── demo.js     the six-act scripted demo
 │   ├── config.js   environment, never holds the seed
 │   └── errors.js   typed errors, each with a suggested fix

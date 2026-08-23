@@ -11,6 +11,8 @@ import { correrEval } from './eval/run.js'
 import { evalInyeccion } from './eval/inyeccion.js'
 import { crearApi } from './api/server.js'
 import { correrDemo } from './demo.js'
+import { correrParidad, paridadMarkdown } from './paridad.js'
+import { cliDisponible, errCliAusente } from './wdk/cli.js'
 
 const AYUDA = `cerrojo — el agente propone, el cerrojo decide
 
@@ -20,6 +22,7 @@ const AYUDA = `cerrojo — el agente propone, el cerrojo decide
   cerrojo policy    muestra las politicas activas, sin tocar la red
   cerrojo doctor    revisa la configuracion y el entorno
   cerrojo serve     levanta la API HTTP local (para una app movil o web)
+  cerrojo paridad   corre la nomina y entrega solo lo aprobado a la CLI oficial de WDK
   cerrojo demo      la demo completa en seis actos, para grabar el video
                     (--rapido: sin modelo, planner determinista · --sin-red: sin cadena)
 
@@ -32,6 +35,11 @@ Opciones de run:
   --demo                  agrega el panel de mainnet en solo lectura
   --reset-dia             pone a cero el acumulado diario antes de correr
   --json                  imprime el recibo.json en vez del markdown
+
+Opciones de paridad:
+  --demostrar-fuga        entrega ademas UNA linea denegada a la CLI, en dry-run,
+                          para ver que la CLI sola no tiene tope ni allowlist
+  --json                  imprime el reporte de paridad en JSON
 
 Opciones de eval:
   --runs <n>              corridas por caso (por defecto: CERROJO_EVAL_RUNS o 5)
@@ -57,6 +65,7 @@ try {
     case 'policy': await cmdPolicy(); break
     case 'doctor': await cmdDoctor(); break
     case 'serve': await cmdServe(); break
+    case 'paridad': await cmdParidad(); break
     case 'demo': await correrDemo({ cfg, sinRed: bandera('sin-red'), rapido: bandera('rapido') }); break
     default: console.log(AYUDA)
   }
@@ -98,6 +107,37 @@ async function cmdRun () {
 
   // Un recibo que no cuadra, o una corrida abortada, no salen con codigo 0.
   process.exit(recibo.failure || !recibo.totals.cuadra ? 1 : 0)
+}
+
+async function cmdParidad () {
+  if (!cliDisponible()) throw errCliAusente()
+
+  // La misma corrida de siempre. La paridad no re-decide nada: lee el recibo.
+  const { recibo, tesoreria } = await correr({
+    csv: valor('csv', cfg.csvPorDefecto),
+    instruccion: valor('instruccion', 'paga la nomina de agosto'),
+    modo: 'dry-run',
+    planner: bandera('llm') ? 'llm' : 'rules',
+    resetDia: !bandera('sin-reset'),
+    escribir: false,
+    cfg
+  })
+
+  const paridad = await correrParidad({
+    cfg,
+    recibo,
+    direccionSdk: tesoreria,
+    demostrarFuga: bandera('demostrar-fuga')
+  })
+
+  if (bandera('json')) {
+    console.log(JSON.stringify(paridad, null, 2))
+  } else {
+    console.log(`
+${paridadMarkdown(paridad)}`)
+  }
+
+  process.exit(paridad.cuadra ? 0 : 1)
 }
 
 async function cmdEval () {

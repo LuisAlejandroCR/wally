@@ -1,5 +1,5 @@
 import type { Receipt, ReceiptLine } from '@/lib/cerrojo'
-import { ESTADO_LABEL, formatAmount, shortAddress } from '@/lib/cerrojo'
+import { formatAmount, shortAddress, statusLabel } from '@/lib/cerrojo'
 import { checkDetailEn, checkLabelEn, quoteNoteEn, reasonEn, ruleNameEn, whyEn } from '@/lib/english'
 
 const PILL: Record<string, string> = {
@@ -48,13 +48,13 @@ export function VerdictIcon ({ estado }: { estado: ReceiptLine['estado'] }) {
   )
 }
 
-export function StatusPill ({ estado }: { estado: ReceiptLine['estado'] }) {
+export function StatusPill ({ estado, txHash = null }: { estado: ReceiptLine['estado']; txHash?: string | null }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${PILL[estado]}`}
     >
       <VerdictIcon estado={estado} />
-      {ESTADO_LABEL[estado]}
+      {statusLabel({ estado, txHash })}
     </span>
   )
 }
@@ -62,8 +62,8 @@ export function StatusPill ({ estado }: { estado: ReceiptLine['estado'] }) {
 export function Totals ({ receipt }: { receipt: Receipt }) {
   const t = receipt.totals
   const cells = [
-    { label: 'Executed', value: t.ejecutadas, tone: 'text-green' },
-    { label: 'Denied by policy', value: t.denegadas, tone: 'text-red' },
+    { label: 'Approved', value: t.ejecutadas, tone: 'text-green' },
+    { label: 'Blocked by policy', value: t.denegadas, tone: 'text-red' },
     { label: 'Not attempted', value: t.no_intentadas, tone: 'text-amber' },
     { label: 'Lines in the payroll', value: t.lineas, tone: 'text-foreground' }
   ]
@@ -80,7 +80,7 @@ export function Totals ({ receipt }: { receipt: Receipt }) {
         <div className="text-2xl font-bold tabular-nums text-green">
           {formatAmount(t.montoEjecutado, t.decimals)} <span className="text-base font-medium text-muted">USDT</span>
         </div>
-        <div className="mt-1 text-xs uppercase tracking-wider text-muted">Moved (simulated)</div>
+        <div className="mt-1 text-xs uppercase tracking-wider text-muted">Authorised (simulated)</div>
       </div>
       <div className="col-span-2 rounded-xl border border-border bg-panel p-4 sm:col-span-2">
         <div className="text-2xl font-bold tabular-nums text-red">
@@ -154,7 +154,7 @@ export function ReceiptTable ({ receipt }: { receipt: Receipt }) {
             <tr key={line.row} className="border-b border-border/60 last:border-0 align-top">
               <td className="p-3 tabular-nums text-muted">{line.row}</td>
               <td className="p-3">
-                <StatusPill estado={line.estado} />
+                <StatusPill estado={line.estado} txHash={line.txHash ?? null} />
               </td>
               <td className="p-3">
                 <span className="font-mono text-xs" title={line.to ?? undefined}>

@@ -62,8 +62,8 @@ export default function InjectionPage () {
           </p>
           <p className="mt-1 text-sm opacity-90">
             {limpia.totals.ejecutadas}/{limpia.totals.denegadas}/{limpia.totals.no_intentadas} against{' '}
-            {envenenada.totals.ejecutadas}/{envenenada.totals.denegadas}/{envenenada.totals.no_intentadas} executed /
-            denied / not attempted. The limits never lived in the prompt, so there was nothing in the file to talk out
+            {envenenada.totals.ejecutadas}/{envenenada.totals.denegadas}/{envenenada.totals.no_intentadas} approved /
+            blocked / not attempted. The limits never lived in the prompt, so there was nothing in the file to talk out
             of them.
           </p>
         </div>

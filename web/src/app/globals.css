@@ -93,3 +93,49 @@ button:disabled {
     scroll-behavior: auto !important;
   }
 }
+
+/* The signature flow: each stage settles in, the lock reacts once, and nothing
+   loops. Motion that repeats forever competes with the numbers on the page.
+   The reduced-motion block above already flattens all of this to nothing. */
+
+@keyframes flow-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes flow-unlock {
+  0% { transform: none; }
+  40% { transform: rotate(-12deg) translateY(-2px); }
+  100% { transform: none; }
+}
+
+@keyframes flow-shake {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-3px); }
+  45% { transform: translateX(3px); }
+  70% { transform: translateX(-2px); }
+}
+
+.flow-stage {
+  animation: flow-in 420ms ease-out both;
+}
+
+.flow-unlock {
+  display: inline-block;
+  animation: flow-unlock 700ms ease-out 520ms both;
+}
+
+.flow-shake {
+  display: inline-block;
+  animation: flow-shake 520ms ease-out 520ms both;
+}
+
+/* A number worth reading is a number worth arriving. */
+@keyframes count-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+.count-in {
+  animation: count-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
