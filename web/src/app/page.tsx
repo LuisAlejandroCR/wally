@@ -2,7 +2,7 @@ import clean from '@/data/run-clean.json'
 import type { Receipt } from '@/lib/cerrojo'
 import { LockFlow } from '@/components/LockFlow'
 import { Explainer } from '@/components/Explainer'
-import { AgentTools, VoucherChain } from '@/components/AgentChannel'
+import { AgentTools, LiveTransfer, VoucherChain } from '@/components/AgentChannel'
 import { Amount } from '@/components/Receipt'
 import { Card, Cta, NextSteps, Note, Page, PageHeader, Section } from '@/components/Page'
 
@@ -182,6 +182,19 @@ export default function Home () {
           programs, and only one of them has a person in it. A prompt cannot pay itself.
         </Note>
         <Cta href="/proof#agent">Read a real MCP session →</Cta>
+      </Section>
+
+      <Section
+        tone="panel"
+        eyebrow="On chain · Sepolia"
+        title={
+          <>
+            And once, <em>a person said yes.</em>
+          </>
+        }
+        lead="A lock that has never opened is not a lock anyone should believe in. So it was opened exactly once, through the longest path in the system, and here is the hash."
+      >
+        <LiveTransfer />
       </Section>
 
       <Section

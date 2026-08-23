@@ -12,7 +12,8 @@
     "demo": "node src/cli.js demo",
     "serve": "node src/cli.js serve",
     "fuzz": "node --test tests/fuzz.test.js tests/invariantes.test.js",
-    "paridad": "node src/cli.js paridad"
+    "paridad": "node src/cli.js paridad",
+    "token": "node scripts/deploy-token.mjs"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +26,9 @@
     "@tetherto/wdk-cli": "^1.0.0-beta.3",
     "@tetherto/wdk-wallet-evm": "^1.0.0-beta.17",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "ethers": "^6.17.0"
   },
   "bin": {
     "cerrojo": "src/cli.js",

@@ -1,5 +1,7 @@
 import mcp from '@/data/mcp.json'
+import tx from '@/data/live-tx.json'
 import { Card, Note } from '@/components/Page'
+import { Amount } from '@/components/Receipt'
 
 /**
  * The agent channel.
@@ -110,6 +112,60 @@ export function VoucherChain () {
           <p className="mt-1.5 text-sm leading-relaxed text-muted">{s.body}</p>
         </div>
       ))}
+    </div>
+  )
+}
+
+/**
+ * The one live transfer.
+ *
+ * Everything else on this site is a decision with nothing broadcast behind it,
+ * which is the point — and also the easiest thing in the world to disbelieve. So
+ * the lock was opened once, deliberately, through the longest path in the system,
+ * and the hash is here rather than described.
+ */
+export function LiveTransfer () {
+  const url = `https://sepolia.etherscan.io/tx/${tx.txHash}`
+  return (
+    <div className="space-y-4">
+      <div className="rise rounded-2xl border border-green/40 bg-green-bg p-5 sm:p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+          <div className="text-3xl font-bold tabular-nums text-green sm:text-4xl">
+            <Amount base={tx.amountBase} decimals={tx.decimals} />{' '}
+            <span className="text-base font-medium text-muted">{tx.symbol}</span>
+          </div>
+          <p className="text-sm text-muted">
+            {tx.network} · block {tx.block.toLocaleString('en-US')} · fee {tx.feeWei} wei
+          </p>
+        </div>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 block break-all font-mono text-sm font-semibold text-blue hover:underline"
+        >
+          {tx.txHash} ↗
+        </a>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {tx.chain.map((s, i) => (
+          <div key={s.who} className="rounded-xl border border-border bg-panel p-4">
+            <span className="font-mono text-sm font-semibold text-blue">0{i + 1}</span>
+            <p className="mt-1.5 text-sm font-semibold">
+              {s.who} {s.did}
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-muted">{s.detail}</p>
+          </div>
+        ))}
+      </div>
+
+      <Note>
+        The command a person typed:{' '}
+        <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-xs">{tx.command}</code>. The policy engine
+        answered <strong>{tx.revalidated}</strong> a second time, at approval, before anything was signed. It is the
+        only transfer this treasury has ever made.
+      </Note>
     </div>
   )
 }

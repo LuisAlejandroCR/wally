@@ -7,7 +7,7 @@ import { policyNameEn, reasonEn, ruleNameEn } from '@/lib/english'
 import { Amount, Checks, DryRunNote, FeeNote, ReceiptTable, RunMeta, StatusPill, Totals, VerdictIcon } from '@/components/Receipt'
 import { CopyAddress } from '@/components/CopyAddress'
 import { ProofTabs } from '@/components/ProofTabs'
-import { AgentTools, McpTranscript, VoucherChain } from '@/components/AgentChannel'
+import { AgentTools, LiveTransfer, McpTranscript, VoucherChain } from '@/components/AgentChannel'
 import { Card, Cta, NextSteps, Note, Page, PageHeader, Section } from '@/components/Page'
 
 export const dynamic = 'force-dynamic'
@@ -328,6 +328,9 @@ export default async function ProofPage () {
         Approving is not a tool. It is a command a person types, and it re-runs the policy engine before it signs —
         so an approval that was valid fifteen minutes ago can still be refused now.
       </Note>
+
+      <Sub>The one time it went all the way through</Sub>
+      <LiveTransfer />
     </Section>
   )
 

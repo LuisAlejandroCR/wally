@@ -278,7 +278,8 @@ the tests use Node's standard library.
 | `CERROJO_NETWORK` | `sepolia` | the network that executes |
 | `CERROJO_RPC_URL` | `https://ethereum-sepolia-rpc.publicnode.com` | |
 | `CERROJO_TOKEN_SYMBOL` | `USDT` | |
-| `CERROJO_TOKEN_ADDRESS` | `0xd077A400968890Eacc75cdc901F0356c943e4fDb` | |
+| `CERROJO_TOKEN_ADDRESS` | `0xF60443fF8F3d1Dd9FB553f7735A9236eb4F01ee5` | our mock USD₮, `mint` open to anyone |
+| `CERROJO_TREASURY` | unset | when set, `scripts/deploy-token.mjs` refuses to sign from any other address |
 | `CERROJO_TOKEN_DECIMALS` | `6` | |
 | `CERROJO_CAP_TX` | `500000000` | base units — 500 USDT per transfer |
 | `CERROJO_CAP_DAY` | `1500000000` | base units — 1500 USDT per day, accumulated |
@@ -297,13 +298,27 @@ the tests use Node's standard library.
 
 ### The token
 
-**We did not deploy the token.** `0xd077A4…4fDb` is the Sepolia USDT that ships in WDK's own asset
-registry. It is an EIP-1967 proxy; the implementation behind it does expose `mint(address,uint256)`,
-but simulating that call from our treasury returns `Ownable: caller is not the owner`, with
-`owner()` set to an address we do not control. Only Tether can mint it, and there is no faucet. So
-the treasury holds Sepolia ETH for gas and **zero test USDT** — visible in the sample receipt, where
-the exact fee quote fails with `ERC20: transfer amount exceeds balance` and the fee falls back to an
-estimate.
+**We deployed the token.** `0xF60443fF8F3d1Dd9FB553f7735A9236eb4F01ee5` is our mock USD₮ on Sepolia,
+source in [`contracts/MockUSDT.sol`](contracts/MockUSDT.sol), compiled with solc 0.8.28 and deployed
+by [`code/scripts/deploy-token.mjs`](code/scripts/deploy-token.mjs). Six decimals, symbol `USDT`, and
+`mint` open to anyone up to 1,000,000 USDT per call — a faucet, so a clean clone can fund itself:
+
+```bash
+npm run token -- mint 0xF60443fF8F3d1Dd9FB553f7735A9236eb4F01ee5 <treasury> 100000000000
+```
+
+The alternative was `0xd077A4…4fDb`, the Sepolia USDT in WDK's own asset registry. It is an EIP-1967
+proxy; the implementation behind it does expose `mint(address,uint256)`, but simulating that call
+from our treasury returns `Ownable: caller is not the owner`, with `owner()` set to an address we do
+not control. Only Tether can mint it and there is no faucet, so a treasury denominated in it holds
+zero forever — every fee quote fails with `ERC20: transfer amount exceeds balance` and no transfer
+can ever execute. Point `CERROJO_TOKEN_ADDRESS` at it if you want to see that failure mode; the
+receipt degrades to `quoteExacto: false` with the reason attached rather than pretending.
+
+`scripts/deploy-token.mjs` lives outside `src/` deliberately. It is the only code here that signs
+without consulting the policy engine, it never reads a payroll or an allowlist, and nothing under
+`src/` imports it. It refuses to sign at all when `CERROJO_TREASURY` is set and the seed derives a
+different address.
 
 Mainnet is read-only and locked twice: the account comes from `toReadOnlyAccount()`, which has no
 write methods at all, and a `mainnet-solo-lectura` policy denies every operation on that network on
@@ -407,19 +422,23 @@ is gitignored — the artifacts live on the machine that ran them, not in this r
 
 ## Limitations and observed failure modes
 
-* **No live payroll has ever been executed.** Dry run is the default and it is what the demo shows.
-  The `--live --confirmo` path exists and is wired to `account.transfer`, but it has never been
-  exercised against the chain, because the treasury holds no test USDT. Every refusal, verdict and
-  receipt shown here is real; the sends are simulated.
-* **`cerrojo paridad` currently shows the CLI reverting on every line, and that is the funding, not
-  a control.** With an unfunded treasury `wdk send --dry-run` fails gas estimation with
-  `ERC20: transfer amount exceeds balance` for approved and denied lines alike. The report labels
-  those as chain reverts rather than policy refusals, because that is what they are — a balance is
-  not a limit. Fund the treasury and the approved lines quote a fee instead; the denied ones still
-  never reach the CLI.
-* **Fee figures are estimates, not exact quotes.** `quoteTransfer` reverts from an unfunded account,
-  so the fee falls back to `getFeeRates() × 65000 gas`. Every affected line is marked
-  `quoteExacto: false` and carries the reason. An approximation is never presented as exact.
+* **No live *payroll* has ever been executed — one live *transfer* has.** Dry run is the default and
+  it is what the demo shows. The `--live --confirmo` path is wired to `account.transfer` and has been
+  exercised exactly once, through the voucher flow, in
+  [`0xbd7b9697…c62bae84c5`](https://sepolia.etherscan.io/tx/0xbd7b969752593948e034fcdea1837c521e33ca711b1b773e752172c62bae84c5):
+  an agent proposed it over MCP, a person approved it in a terminal, the policy engine re-validated
+  it, and 150.000000 USDT moved. Running the whole twelve-line payroll live would prove nothing the
+  single transfer does not, and would spend the daily cap for no evidence.
+* **Fee figures are exact quotes now that the treasury is funded.** `quoteTransfer` used to revert
+  from an unfunded account and the fee fell back to `getFeeRates() × 65000 gas`. With a mock-USD₮
+  balance in place, receipts carry `quoteExacto: true`. The fallback path is still there and still
+  labels its output `quoteExacto: false` with the reason — point `CERROJO_TOKEN_ADDRESS` at the
+  registry USD₮ to see it. An approximation is never presented as exact.
+* **`cerrojo paridad` needs the WDK CLI wallet unlocked.** It shells out to the real `wdk` binary,
+  which keeps its own encrypted keyring: without `WDK_PASSPHRASE` and a live `wallet unlock`, the
+  command exits with the typed error `E_WDKCLI_LOCKED` and the fix printed under it. That is a
+  separate keyring from `CERROJO_SEED` on purpose — the parity check is worth nothing if both sides
+  read the same variable.
 * **The daily accumulator is ours, not WDK's.** Because `onSuccess` is inert in this beta, the
   counter is a JSON file under `code/state/`. It is per-machine and not safe against concurrent
   processes: two Cerrojo runs racing on the same machine could both pass the daily check.

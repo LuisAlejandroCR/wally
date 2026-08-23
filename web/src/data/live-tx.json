@@ -1,0 +1,23 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "txHash": "0xbd7b969752593948e034fcdea1837c521e33ca711b1b773e752172c62bae84c5",
+  "block": 11548511,
+  "status": "success",
+  "amountBase": "150000000",
+  "decimals": 6,
+  "symbol": "USDT",
+  "from": "0xD570f7170e5C4429e3a86dfFf34651E3eD7f754e",
+  "to": "0x17d5D5fC28ee6240e1129CCBf386458071b056F9",
+  "token": "0xF60443fF8F3d1Dd9FB553f7735A9236eb4F01ee5",
+  "feeWei": "109494023762340",
+  "voucher": "vale_2026-08-23T07-16-53-548Z_d4c15f",
+  "revalidated": "ALLOW",
+  "command": "node src/cli.js aprobar vale_2026-08-23T07-16-53-548Z_d4c15f --live --confirmo",
+  "chain": [
+    { "who": "An agent", "did": "proposed it over MCP", "detail": "cerrojo_proponer_pago returned a voucher, not a payment." },
+    { "who": "A person", "did": "approved it in a terminal", "detail": "The only place in the system where approving exists." },
+    { "who": "The policy engine", "did": "was asked again", "detail": "Re-validated ALLOW at approval time, not at proposal time." },
+    { "who": "WDK", "did": "signed and broadcast it", "detail": "account.transfer, reached only by an authorised line." }
+  ]
+}

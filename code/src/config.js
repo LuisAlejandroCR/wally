@@ -40,7 +40,11 @@ export function cargarConfig (overrides = {}) {
     rpcUrl: env.CERROJO_RPC_URL ?? 'https://ethereum-sepolia-rpc.publicnode.com',
     token: {
       symbol: env.CERROJO_TOKEN_SYMBOL ?? 'USDT',
-      address: env.CERROJO_TOKEN_ADDRESS ?? '0xd077A400968890Eacc75cdc901F0356c943e4fDb',
+      // Sepolia's registry USD₮ cannot be minted by us, so a treasury on it holds
+      // zero and no transfer can ever execute. The default is our own mock USD₮
+      // (contracts/MockUSDT.sol), whose `mint` is open: a clean clone can give
+      // itself a balance and watch the lock both refuse and allow.
+      address: env.CERROJO_TOKEN_ADDRESS ?? '0xF60443fF8F3d1Dd9FB553f7735A9236eb4F01ee5',
       decimals: Number(env.CERROJO_TOKEN_DECIMALS ?? 6)
     },
     capTx: entero(env.CERROJO_CAP_TX, '500000000'),

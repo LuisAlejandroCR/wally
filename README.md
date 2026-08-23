@@ -118,29 +118,41 @@ port and the limits still hold. If the chain is down, Cerrojo still says no.
 
 ## Audit it yourself
 
-Nothing here asks to be believed. The wallet, the token and every address are public, and the two
-claims that matter most — *this token is not ours to mint* and *nothing was ever paid out* — are each
-one click away. **The figures below were read from the chain at block 11,547,922 on 2026-08-23.**
-Balances move; the contract addresses do not.
+Nothing here asks to be believed. The wallet, the token and every address are public, and the claim
+that matters most — *this wallet has signed exactly three transactions, and you can name all three* —
+is one click away. **The figures below were read from the chain at block 11,548,523 on 2026-08-23.**
+Balances move; the contract addresses and the transaction hashes do not.
 
 ### The token
 
-The payroll is denominated in Sepolia test USDT. We did not deploy it, and could not mint it if we
-wanted to:
+The payroll is denominated in a mock USD₮ we deployed for this demo, on Sepolia:
 
 | | |
 |---|---|
-| Contract | [`0xd077A400968890Eacc75cdc901F0356c943e4fDb`](https://sepolia.etherscan.io/address/0xd077A400968890Eacc75cdc901F0356c943e4fDb) |
-| Name and symbol on chain | Tether USD · `USD₮` |
+| Contract | [`0xF60443fF8F3d1Dd9FB553f7735A9236eb4F01ee5`](https://sepolia.etherscan.io/address/0xF60443fF8F3d1Dd9FB553f7735A9236eb4F01ee5) |
+| Source | [`contracts/MockUSDT.sol`](contracts/MockUSDT.sol) · solc 0.8.28, optimizer on, 200 runs |
+| Name and symbol | Cerrojo Mock USDT · `USDT` |
 | Decimals | 6 — so `500000000` in a receipt means 500.000000 USDT |
-| Total supply | 200,000,000.000000 USDT |
-| Kind | EIP-1967 proxy → implementation [`0xb5a2f297…8f534117`](https://sepolia.etherscan.io/address/0xb5a2f2979aa716b65d98f3535baac4468f534117) |
-| Owner — the only address that can mint | [`0xbbaaa0f2…be7e0e18`](https://sepolia.etherscan.io/address/0xbbaaa0f2c7bb16c0b412f0a561adb21abe7e0e18), which is not us |
+| Deployed by | the treasury below, in [`0xa498631c…be937751`](https://sepolia.etherscan.io/tx/0xa498631ce182bc904cf299d503c40a6fd9dfec77cdaca5494bd69c67be937751), block 11,548,499 |
+| Who can mint | **anyone**, up to 1,000,000 USDT per call. It is a faucet |
 
-It is the Sepolia USDT that ships in WDK's own asset registry. There is no faucet, `mint` is
-`onlyOwner`, and simulating that call from our treasury returns `Ownable: caller is not the owner`.
+Why not the USD₮ in WDK's own asset registry
+([`0xd077A400…943e4fDb`](https://sepolia.etherscan.io/address/0xd077A400968890Eacc75cdc901F0356c943e4fDb))?
+Because its `mint` is `onlyOwner` and the owner is
+[`0xbbaaa0f2…be7e0e18`](https://sepolia.etherscan.io/address/0xbbaaa0f2c7bb16c0b412f0a561adb21abe7e0e18),
+which is not us. A treasury holding zero of it can never execute a transfer, and a lock that has
+never opened is not a lock anyone should believe in. So we deployed a token we could actually fund,
+and left `mint` open so that you can too:
 
-### The treasury, and the transaction that never happened
+```bash
+cd code
+npm run token -- mint 0xF60443fF8F3d1Dd9FB553f7735A9236eb4F01ee5 <your-treasury> 100000000000
+```
+
+A token anyone can print is worth nothing, which is the correct value for a token whose job is to
+demonstrate a refusal.
+
+### The treasury, and the one transaction that did happen
 
 One account, derived from a throwaway testnet seed phrase that never leaves the machine that
 generated it:
@@ -149,44 +161,61 @@ generated it:
 |---|---|
 | Address | [`0xD570f7170e5C4429e3a86dfFf34651E3eD7f754e`](https://sepolia.etherscan.io/address/0xD570f7170e5C4429e3a86dfFf34651E3eD7f754e) |
 | Network | Ethereum Sepolia testnet, chain id `11155111` |
-| Holds | 0.996 ETH for gas · **0 test USDT** |
-| **Transactions ever sent** | **0** |
+| Holds | 0.9954 ETH for gas · 99,850.000000 mock USDT |
+| **Transactions ever sent** | **3** — and here they are |
 
-That last row is the audit. A payroll that had really been paid would show up as transfers sent from
-this address, and there are none: the account's transaction count is zero, so it has never signed
-anything at all. Every receipt in this repository was produced in dry run — decided in full, signed
-never, broadcast never — and the chain agrees.
+| # | Transaction | What it was |
+|---|---|---|
+| 1 | [`0xa498631c…be937751`](https://sepolia.etherscan.io/tx/0xa498631ce182bc904cf299d503c40a6fd9dfec77cdaca5494bd69c67be937751) | deploying the mock token · block 11,548,499 |
+| 2 | [`0xfd221c2b…5ceb92620`](https://sepolia.etherscan.io/tx/0xfd221c2b93f69ccd0fe217b5315b781b1faaf11badea1742525d2e45ceb92620) | minting 100,000 USDT to the treasury · block 11,548,501 |
+| 3 | [**`0xbd7b9697…c62bae84c5`**](https://sepolia.etherscan.io/tx/0xbd7b969752593948e034fcdea1837c521e33ca711b1b773e752172c62bae84c5) | **the payment** · 150.000000 USDT · block 11,548,511 |
 
-Open the explorer link above and read the transactions tab, or ask any Sepolia node directly, without
-cloning anything:
+The first two are setup, signed by [`scripts/deploy-token.mjs`](code/scripts/deploy-token.mjs) —
+which is kept outside `src/` precisely because it is the one thing here that signs without asking the
+policy engine, and nothing under `src/` imports it.
+
+The third is the product. An agent proposed it over MCP and was handed a voucher instead of a
+payment. A person read the voucher and typed `node src/cli.js aprobar <id> --live --confirmo` in
+their own terminal. The policy engine was asked again, at approval time, and answered `ALLOW`. Then
+`@tetherto/wdk` signed it. That is the whole chain of custody, and it is the only transfer this
+wallet has ever made.
+
+Everything else in this repository — every receipt, every eval run, every screen on the website — was
+produced in dry run: decided in full, signed never, broadcast never. You can tell the two apart
+without trusting us, because `lines[].txHash` is `null` on a dry run and a hash on a live one.
+
+Ask any Sepolia node directly, without cloning anything:
 
 ```bash
 curl -s -X POST https://ethereum-sepolia-rpc.publicnode.com -H "content-type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_getTransactionCount\",\"params\":[\"0xD570f7170e5C4429e3a86dfFf34651E3eD7f754e\",\"latest\"]}"
 ```
 
-`"result":"0x0"` is the answer today, and it means this wallet has never moved a cent.
+`"result":"0x3"` is the answer, and the three are listed above.
 
 ### The people in the payroll do not exist
 
-The five approved recipients are invented, and the chain shows it: none of them has ever sent a
-transaction or held a balance. No real personal data is committed anywhere in this repository, which
-is also why the measurements reproduce on someone else's machine.
+The five approved recipients are invented, and the chain shows it: not one of them has ever sent a
+transaction. No real personal data is committed anywhere in this repository, which is also why the
+measurements reproduce on someone else's machine.
 
 | Approved recipient | On-chain history |
 |---|---|
 | [`0xC4d2d867…C57a951b`](https://sepolia.etherscan.io/address/0xC4d2d867961b2791081Bd0B4fAc4e3bEC57a951b) | empty |
 | [`0xB51803A4…11247318`](https://sepolia.etherscan.io/address/0xB51803A4F24B2776456fEe6c869c95c811247318) | empty |
 | [`0x257ff557…1A08104A`](https://sepolia.etherscan.io/address/0x257ff557AEc482560B2938264d5593a31A08104A) | empty |
-| [`0x17d5D5fC…71b056F9`](https://sepolia.etherscan.io/address/0x17d5D5fC28ee6240e1129CCBf386458071b056F9) | empty — this is the row refused for exceeding the per-transfer cap |
+| [`0x17d5D5fC…71b056F9`](https://sepolia.etherscan.io/address/0x17d5D5fC28ee6240e1129CCBf386458071b056F9) | holds **150.000000 mock USDT** — the one live payment landed here. In the payroll, this is also the row refused for exceeding the per-transfer cap |
 | [`0xa9aBF679…91FD45A5`](https://sepolia.etherscan.io/address/0xa9aBF679D7304cA82C10Bc13dB24447191FD45A5) | empty |
 
+That fourth row is worth a second look: the same address is both **paid** and **refused**, depending
+only on the amount. 150 USDT went through. 900 USDT is what the payroll asks for, and the
+per-transfer cap refuses it every time.
+
 The address the attack tries to reach, `0x0000…dEaD`, is the well-known burn address. It is not on
-the list, it is refused every time, and it has received nothing from us — the treasury has sent
-nothing to anyone.
+the list, it is refused on every run, and it has received nothing from us — check it yourself.
 
 ### What a receipt lets you re-check
 
-Because nothing is broadcast, the audit trail is the receipt plus the file it came from. Every run
+On a dry run nothing is broadcast, so the audit trail is the receipt plus the file it came from. Every run
 writes both, and these are the fields to read first:
 
 | Field in `recibo.json` | What it pins down |
@@ -445,9 +474,13 @@ under [Audit it yourself](#audit-it-yourself). What that section does not cover:
 | Allowlist | `code/evals/fixtures/allowlist.txt`, one address per line |
 | Read-only network | **Polygon mainnet**, via `https://polygon-bor-rpc.publicnode.com` |
 | Live sends on mainnet | none, ever |
+| Deployed contract | mock USD₮ `0xF60443fF8F3d1Dd9FB553f7735A9236eb4F01ee5`, source in [`contracts/MockUSDT.sol`](contracts/MockUSDT.sol) |
+| Live transfer on record | one: [`0xbd7b9697…c62bae84c5`](https://sepolia.etherscan.io/tx/0xbd7b969752593948e034fcdea1837c521e33ca711b1b773e752172c62bae84c5) |
 
-**We did not deploy the token**, and the treasury holds gas but zero test USDT. That is why fees are
-estimates and no live payroll has ever run; every consequence is listed under
+**We deployed the payroll token ourselves** and left its `mint` open, because the registry USD₮ on
+Sepolia cannot be minted by anyone but Tether. With the treasury actually funded, the fee quotes in a
+receipt are exact rather than estimates (`quoteExacto: true`), and a single live transfer has been
+executed end to end. The remaining limits are listed under
 [limitations](DEV.md#limitations-and-observed-failure-modes).
 
 `code/.env.example` lists every variable Cerrojo reads; all have working defaults except
