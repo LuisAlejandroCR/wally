@@ -5,21 +5,24 @@ import WDK from '@tetherto/wdk'
 import { RAIZ } from '../src/config.js'
 
 /**
- * Seed de testnet para los tests que cruzan un proceso.
+ * Testnet seed for the tests that cross a process boundary.
  *
- * `policy.test.js` y `recibo.test.js` ya generan la suya en memoria. Los tests que arrancan
- * el CLI, el servidor MCP o la API no pueden: leen `CERROJO_SEED` del entorno, asi que hasta
- * ahora dependian de que la maquina tuviera un `code/.env`. En una clonada limpia eso deja
- * cinco tests en rojo, y el carril pide `npm test` en verde entero antes de cada commit.
+ * `policy.test.js` and `recibo.test.js` already mint their own in memory. The tests that
+ * start the CLI, the MCP server or the API cannot: they read `CERROJO_SEED` from the
+ * environment, so until now they depended on the machine having a `code/.env`. On a clean
+ * clone that left five tests red, and the lane requires `npm test` fully green before
+ * every commit.
  *
- * Se genera en memoria, muere con el proceso de test, no se escribe y no toca ni un fondo:
- * ninguno de estos tests envia — la API no tiene endpoint de envio y el CLI corre `--sin-red`.
+ * Generated in memory, dies with the test process, never written to disk and never touches
+ * a single fund: none of these tests send — the API has no send endpoint and the CLI runs
+ * with `--sin-red`.
  */
 export const SEED = WDK.getRandomSeedPhrase()
 
 /**
- * Entorno de un test que arranca un proceso: seed efimera y estado del dia aparte, para que
- * el test no dependa de cuanto se gasto hoy en las demos ni lo ensucie.
+ * The environment for a test that spawns a process: the ephemeral seed, plus the day's state
+ * in a directory of its own, so the test neither depends on what the demos spent today nor
+ * dirties it.
  */
 export function entorno (nombreEstado) {
   return {
