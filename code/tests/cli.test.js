@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 
 import { RAIZ } from '../src/config.js'
+import { entorno } from './semilla.js'
 
 const CLI = join(RAIZ, 'src', 'cli.js')
 
@@ -12,7 +13,7 @@ function cerrojo (...args) {
   return spawnSync(process.execPath, [CLI, ...args], {
     cwd: RAIZ,
     encoding: 'utf8',
-    env: { ...process.env, CERROJO_STATE_DIR: join(RAIZ, 'state', 'tests-cli') }
+    env: entorno('tests-cli')
   })
 }
 
@@ -40,7 +41,7 @@ test('policy no necesita ni red ni seed para listar el cerrojo', () => {
   const r = spawnSync(process.execPath, [CLI, 'policy'], {
     cwd: RAIZ,
     encoding: 'utf8',
-    env: { ...process.env, CERROJO_SEED: '', CERROJO_STATE_DIR: join(RAIZ, 'state', 'tests-cli') }
+    env: { ...entorno('tests-cli'), CERROJO_SEED: '' }
   })
 
   assert.equal(r.status, 0)

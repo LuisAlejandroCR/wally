@@ -4,19 +4,30 @@ import { join } from 'node:path'
 
 import { RAIZ, cargarConfig } from '../src/config.js'
 import { crearApi } from '../src/api/server.js'
+import { SEED } from './semilla.js'
 
 const cfg = cargarConfig({ CERROJO_STATE_DIR: join(RAIZ, 'state', 'tests-api') })
 
 let servidor
 let base
+let seedPrevia
 
 before(async () => {
+  // La API abre la sesion por peticion y lee la seed del entorno, asi que aqui va y no en
+  // un argumento: el objeto de config no lleva la seed dentro, y eso no se toca por un test.
+  seedPrevia = process.env.CERROJO_SEED
+  process.env.CERROJO_SEED = SEED
+
   servidor = crearApi({ cfg })
   await new Promise((r) => servidor.listen(0, '127.0.0.1', r))
   base = `http://127.0.0.1:${servidor.address().port}`
 })
 
-after(() => servidor?.close())
+after(() => {
+  servidor?.close()
+  if (seedPrevia === undefined) delete process.env.CERROJO_SEED
+  else process.env.CERROJO_SEED = seedPrevia
+})
 
 const get = async (ruta) => (await fetch(base + ruta)).json()
 const post = async (ruta, cuerpo) => {
