@@ -7,7 +7,7 @@
 // to pass a human and then the policy engine, in that order.
 
 import { realpathSync } from 'node:fs'
-import { join } from 'node:path'
+import { isAbsolute, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -41,6 +41,25 @@ import { reciboMarkdown } from '../receipt/markdown.js'
  * in Spanish, matching the engine's own voice — the display layer translates.
  */
 const cfg = cargarConfig()
+
+/**
+ * The two tools that take a path take it from a stranger.
+ *
+ * Over stdio the caller is the person who started the process, so a path is just
+ * a path. Over Streamable HTTP the caller is anonymous, and `join()` on an
+ * argument is a file read: `../` walks out of the project, and a CSV that parses
+ * comes back inside the receipt's `concepto` column. So both arguments are
+ * resolved and then required to land inside the project — the fixtures, the
+ * payroll data and the runs all do, and nothing outside has any business being
+ * read by an MCP client.
+ */
+function dentroDelProyecto (ruta) {
+  const abs = isAbsolute(ruta) ? resolve(ruta) : resolve(RAIZ, ruta)
+  return abs === RAIZ || abs.startsWith(RAIZ + sep) ? abs : null
+}
+
+/** A run id is a name, never a path: no separators, no dots that walk. */
+const RUN_ID = /^[A-Za-z0-9_-]+$/
 
 /**
  * Builds a server with the nine tools registered, ready for any transport.
@@ -156,8 +175,17 @@ export function crearServidor () {
       annotations: { readOnlyHint: false, destructiveHint: false }
     },
     async ({ csv, instruccion, formato = 'markdown' }) => {
+      const ruta = csv ? dentroDelProyecto(csv) : cfg.csvPorDefecto
+      if (!ruta) {
+        return texto(JSON.stringify({
+          error: 'E_RUTA',
+          mensaje: `La ruta "${csv}" queda fuera del proyecto.`,
+          nota: 'Este servidor solo lee CSV que viven dentro del repositorio, por ejemplo evals/fixtures/nomina_agosto.csv.'
+        }, null, 2))
+      }
+
       const { recibo, markdown } = await correr({
-        csv: csv ? (csv.startsWith('.') || csv.includes(':') ? csv : join(RAIZ, csv)) : cfg.csvPorDefecto,
+        csv: ruta,
         instruccion: instruccion ?? 'paga la nomina',
         modo: 'dry-run', // no hay forma de pedir 'live' desde MCP. A proposito.
         planner: 'rules',
@@ -200,6 +228,9 @@ export function crearServidor () {
     },
     async ({ runId }) => {
       const { readFileSync } = await import('node:fs')
+      if (!RUN_ID.test(runId)) {
+        return texto(`"${runId}" no tiene forma de runId. Se ven asi: run_2026-08-22T14-03-11Z.`)
+      }
       try {
         const crudo = readFileSync(join(cfg.dirRuns, runId, 'recibo.json'), 'utf8')
         return texto(reciboMarkdown(JSON.parse(crudo)))
