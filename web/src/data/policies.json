@@ -1,0 +1,79 @@
+{
+  "red": "sepolia",
+  "token": {
+    "symbol": "USDT",
+    "address": "0xd077A400968890Eacc75cdc901F0356c943e4fDb",
+    "decimals": 6
+  },
+  "topePorTransferencia": {
+    "base": "500000000",
+    "legible": "500.000000"
+  },
+  "topeDiario": {
+    "base": "1500000000",
+    "legible": "1500.000000"
+  },
+  "destinatariosPermitidos": 5,
+  "politicas": [
+    {
+      "id": "transferencia-de-nomina",
+      "nombre": "Permitir solo transferencias de token",
+      "reglas": [
+        {
+          "nombre": "permitir-transfer",
+          "accion": "ALLOW",
+          "operacion": "transfer",
+          "razon": null
+        }
+      ]
+    },
+    {
+      "id": "cap-por-transferencia",
+      "nombre": "Tope por transferencia: 500.000000 USDT",
+      "reglas": [
+        {
+          "nombre": "denegar-sobre-tope",
+          "accion": "DENY",
+          "operacion": "transfer",
+          "razon": "Supera el tope por transferencia de 500000000 unidades base (500.000000 USDT)."
+        }
+      ]
+    },
+    {
+      "id": "allowlist-destinatarios",
+      "nombre": "Solo destinatarios de la lista",
+      "reglas": [
+        {
+          "nombre": "denegar-fuera-de-lista",
+          "accion": "DENY",
+          "operacion": "transfer",
+          "razon": "El destinatario no esta en la lista de beneficiarios permitidos."
+        }
+      ]
+    },
+    {
+      "id": "solo-token-esperado",
+      "nombre": "Solo el token de la nomina (USDT)",
+      "reglas": [
+        {
+          "nombre": "denegar-otro-token",
+          "accion": "DENY",
+          "operacion": "transfer",
+          "razon": "Esta corrida solo mueve USDT en 0xd077A400968890Eacc75cdc901F0356c943e4fDb. Otro contrato se deniega."
+        }
+      ]
+    },
+    {
+      "id": "cap-diario",
+      "nombre": "Tope diario acumulado: 1500.000000 USDT",
+      "reglas": [
+        {
+          "nombre": "denegar-sobre-acumulado",
+          "accion": "DENY",
+          "operacion": "transfer",
+          "razon": "La suma del dia superaria el tope diario de 1500000000 unidades base (1500.000000 USDT)."
+        }
+      ]
+    }
+  ]
+}

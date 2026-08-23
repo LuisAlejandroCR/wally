@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/* Cream palette. Every pair below was measured, not eyeballed:
+   body text 14.9:1, muted text 5.5:1 on the page and 5.0:1 on the raised
+   surface, each status colour ≥ 4.5:1 against its own tint, and the control
+   border 3.3:1 for the non-text 3:1 rule. Nothing here relies on colour alone —
+   every verdict also carries an icon and a word. */
+
+:root {
+  --background: #faf6ef;
+  --panel: #fffdf8;
+  --panel-high: #f2eadc;
+  --border: #e0d5c1;
+  --border-strong: #9a8563;
+  --foreground: #24211c;
+  --muted: #6b6355;
+
+  --green: #1f7a4c;
+  --green-bg: #e1f1e6;
+  --red: #b3261e;
+  --red-bg: #fbe5e3;
+  --amber: #8a5a00;
+  --amber-bg: #faf0d9;
+  --blue: #1b5fbf;
+  --on-blue: #fffdf8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-panel: var(--panel);
+  --color-panel-high: var(--panel-high);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-green: var(--green);
+  --color-green-bg: var(--green-bg);
+  --color-red: var(--red);
+  --color-red-bg: var(--red-bg);
+  --color-amber: var(--amber);
+  --color-amber-bg: var(--amber-bg);
+  --color-blue: var(--blue);
+  --color-on-blue: var(--on-blue);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--blue);
+  color: var(--on-blue);
+}
+
+/* Wide tables scroll inside their own box; the page body never scrolls sideways. */
+.scroll-x {
+  overflow-x: auto;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Interaction rules, applied globally so no component can forget one:
+   pointer affordance, a focus ring that is never removed, and motion a reader
+   can turn off. */
+
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+summary {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:where(a, button, select, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
