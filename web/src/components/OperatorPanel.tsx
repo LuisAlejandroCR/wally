@@ -76,7 +76,7 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
 
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-muted" htmlFor="instruction">
-            2 · Instruction, in Spanish
+            2 · Instruction
           </label>
           <input
             id="instruction"
@@ -84,6 +84,12 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
             onChange={(e) => setInstruction(e.target.value)}
             className="w-full rounded-lg border border-border-strong bg-panel px-3 py-2 font-mono text-sm"
           />
+          <p className="text-xs text-muted">
+            Any language. The deterministic planner never parses this text — it records it on the receipt and reads
+            the CSV. The LLM planner does read it, and has produced a valid plan on the first attempt from both a
+            Spanish and an English instruction. The demo keeps the Spanish wording because that is what the recorded
+            run and the video use.
+          </p>
         </div>
 
         <div className="space-y-2">

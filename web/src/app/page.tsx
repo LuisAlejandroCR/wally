@@ -17,7 +17,8 @@ export default function Home () {
           A payroll agent that cannot go over the line, even when the file tells it to.
         </h1>
         <p className="max-w-3xl text-lg text-muted">
-          A CSV and one sentence in Spanish go in. The model only <em>proposes</em> a payment plan: it never calls{' '}
+          A CSV and one sentence go in, in whichever language you write it. The model only <em>proposes</em> a
+          payment plan: it never calls{' '}
           <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-sm">transfer</code>,{' '}
           <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-sm">sign</code> or{' '}
           <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-sm">sendTransaction</code>. Authorization
@@ -60,9 +61,8 @@ export default function Home () {
         <FeeNote receipt={receipt} />
 
         <p className="text-sm text-muted">
-          The engine writes its reasons in Spanish, the language the payroll instruction is given in. Each one is
-          rendered in English here with the engine&apos;s own sentence kept underneath, marked verbatim: the interface
-          translates, it never restates a verdict. {receipt.totals.ejecutadas} + {receipt.totals.denegadas} +{' '}
+          The engine writes its reasons in Spanish. Each one is rendered in English here with the engine&apos;s own
+          sentence kept underneath, marked verbatim: the interface translates, it never restates a verdict. {receipt.totals.ejecutadas} + {receipt.totals.denegadas} +{' '}
           {receipt.totals.no_intentadas} = {receipt.totals.lineas}, and the receipt is only issued when that adds up.
         </p>
       </section>
