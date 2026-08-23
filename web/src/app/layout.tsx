@@ -30,7 +30,12 @@ const playfair = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'Cerrojo — the agent proposes, the lock decides',
+  // Without this, Next resolves the social images against http://localhost:3000
+  // and every preview card is broken the moment the link leaves this machine —
+  // which, for a submission that gets shared as a link, is the whole point of
+  // having them.
+  metadataBase: new URL('https://cerrojo-app.vercel.app'),
+  title: 'Cerrojo - the agent proposes, the lock decides',
   description:
     'A payroll agent built on Tether WDK whose spending limits do not live in the prompt. Every verdict here came out of the WDK policy engine.'
 }

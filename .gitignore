@@ -23,3 +23,8 @@ npm-debug.log*
 web/.agents
 web/.claude
 .claude/
+
+# Video masters and exports live outside the repo
+assets/video/
+web/public/*.mp4
+web/public/*.mp3
