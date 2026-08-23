@@ -73,15 +73,46 @@ export function formatAmount (base: string | null, decimals: number): string {
   return `${negative ? '-' : ''}${grouped}${frac}`
 }
 
+/**
+ * The same amount with trailing zeros dropped, for a headline figure.
+ *
+ * Lossless on purpose: it only removes zeros that carry no information, so
+ * `1296.000000` reads `1,296.00` and `180.500000` reads `180.50`. No value is
+ * ever rounded — a payroll figure that changed on the way to the screen would
+ * be a worse bug than an ugly one.
+ */
+export function formatAmountShort (base: string | null, decimals: number, minFrac = 2): string {
+  const full = formatAmount(base, decimals)
+  if (!full.includes('.')) return full
+  const [whole, frac] = full.split('.')
+  const trimmed = frac.replace(/0+$/, '')
+  const kept = trimmed.padEnd(Math.min(minFrac, frac.length), '0')
+  return kept.length > 0 ? `${whole}.${kept}` : whole
+}
+
 export function shortAddress (address: string | null): string {
   if (!address) return '—'
   return address.length <= 14 ? address : `${address.slice(0, 8)}…${address.slice(-6)}`
 }
 
 export const ESTADO_LABEL: Record<Estado, string> = {
-  ejecutada: 'Executed',
-  denegada: 'Denied',
+  ejecutada: 'Approved',
+  denegada: 'Blocked',
   no_intentada: 'Not attempted'
+}
+
+/**
+ * The label a line has earned, which is not always the name of its state.
+ *
+ * The engine calls a line `ejecutada` once the policy engine allowed it and the
+ * execution layer processed it — but in a dry run nothing was sent, so calling
+ * that "Executed" on screen would claim a transaction that does not exist. A
+ * line is only EXECUTED when it carries a transaction hash; until then it is
+ * APPROVED, which is what actually happened to it.
+ */
+export function statusLabel (line: Pick<ReceiptLine, 'estado' | 'txHash'>): string {
+  if (line.estado === 'ejecutada') return line.txHash ? 'Executed' : 'Approved'
+  return ESTADO_LABEL[line.estado]
 }
 
 /**
