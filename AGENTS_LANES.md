@@ -19,7 +19,7 @@ por bonita que se vea en pantalla.
 
 | Carril | Dueño | Directorios | Estado |
 |---|---|---|---|
-| **A · Motor** | agente del núcleo | `code/src/{ingest,plan,policy,wdk,execute,receipt,eval}`, `code/tests`, `code/evals` | ✅ funcionando, 20/20 tests, eval 18/18 |
+| **A · Motor** | agente del núcleo | `code/src/{ingest,plan,policy,wdk,execute,receipt,eval}`, `code/tests`, `code/evals` | ✅ funcionando, 38/38 tests, eval 20/20, falsos permisos 0 |
 | **B · Interfaces** | agente del núcleo | `code/src/cli.js`, `code/src/mcp/`, `code/src/api/` | ✅ CLI + MCP + HTTP |
 | **C · App** | agente de RN/web | `app/` (aún no existe) | ⏳ P2, solo si A y B están congelados |
 | **D · Entrega** | humano | `README.md`, video, DoraHacks | ⏳ |
