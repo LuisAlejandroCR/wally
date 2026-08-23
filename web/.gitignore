@@ -47,3 +47,7 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# `vercel link` re-appends `.env*` above, which swallows the example file again.
+# The names of the variables are documentation; the values never travel.
+!.env.example
