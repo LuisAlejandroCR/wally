@@ -5,6 +5,11 @@
  * and `policy.reason` on screen is read straight out of an API response; nothing
  * here evaluates a cap, an allowlist or a rule. Amounts arrive as integer strings
  * in base units and are only formatted for display.
+ *
+ * The interface is in English. The engine's own strings are not: the three
+ * states, the policy reasons, the abstention reasons and the receipt are printed
+ * exactly as the engine wrote them, because rewording a verdict is a way of
+ * quietly replacing it.
  */
 
 const estado = {
@@ -32,16 +37,16 @@ async function pedir (ruta, opciones = {}) {
   } catch {
     throw {
       code: 'E_RESPUESTA_ILEGIBLE',
-      message: `El servidor de la app respondio algo que no es JSON en ${ruta}.`,
-      suggestion: 'Revisa la consola donde corre: node app/server.js'
+      message: `The app server answered something that is not JSON at ${ruta}.`,
+      suggestion: 'Check the console running: node app/server.js'
     }
   }
 
   if (!respuesta.ok || datos?.error) {
     throw datos?.error ?? {
       code: `E_HTTP_${respuesta.status}`,
-      message: `${ruta} respondio ${respuesta.status}.`,
-      suggestion: 'Revisa la consola del servidor.'
+      message: `${ruta} answered ${respuesta.status}.`,
+      suggestion: 'Check the server console.'
     }
   }
 
@@ -50,7 +55,7 @@ async function pedir (ruta, opciones = {}) {
 
 /* -------------------------------------------------------------- formato --- */
 
-/** Entero en unidades base -> texto legible. Solo presentacion. */
+/** Integer in base units -> readable text. Presentation only. */
 function formatear (base, decimales) {
   if (base === null || base === undefined) return null
   const n = BigInt(base)
@@ -60,13 +65,13 @@ function formatear (base, decimales) {
   return decimales === 0 ? entero.toString() : `${entero}.${resto}`
 }
 
-/** USDT escrito por una persona -> entero en unidades base, sin floats. */
+/** USDT as a person types it -> integer in base units, no floats. */
 function aUnidadesBase (texto, decimales) {
   const limpio = String(texto ?? '').trim().replace(/\s/g, '').replace(',', '.')
-  if (!/^\d+(\.\d+)?$/.test(limpio)) return { ok: false, why: `"${texto}" no es un numero legible.` }
+  if (!/^\d+(\.\d+)?$/.test(limpio)) return { ok: false, why: `"${texto}" is not a readable number.` }
 
   const [enteros, dec = ''] = limpio.split('.')
-  if (dec.length > decimales) return { ok: false, why: `El token admite ${decimales} decimales y escribiste ${dec.length}.` }
+  if (dec.length > decimales) return { ok: false, why: `The token takes ${decimales} decimals and you wrote ${dec.length}.` }
 
   return { ok: true, base: (enteros + dec.padEnd(decimales, '0')).replace(/^0+(?=\d)/, '') }
 }
@@ -89,9 +94,42 @@ function limpiar (el) { while (el.firstChild) el.removeChild(el.firstChild) }
 function mostrar (id) {
   for (const p of document.querySelectorAll('.pantalla')) p.classList.toggle('activa', p.id === id)
   window.scrollTo({ top: 0, behavior: 'smooth' })
+  revelar(document.getElementById(id))
 }
 
-function cargando (visible, texto = 'Consultando al motor…') {
+/**
+ * Staggered entrance for the screen being shown. Cosmetic only: the stylesheet
+ * hides `.rv` exclusively while <body> carries `revelar`, a class this file
+ * adds, so a page whose script never ran still shows every word.
+ */
+function revelar (pantalla) {
+  if (!pantalla || typeof pantalla.querySelectorAll !== 'function') return
+
+  const piezas = Array.from(pantalla.querySelectorAll('.rv'))
+  for (const [i, el] of piezas.entries()) {
+    el.classList.remove('dentro')
+    el.style.transitionDelay = `${Math.min(i * 55, 400)}ms`
+  }
+
+  const encender = () => { for (const el of piezas) el.classList.add('dentro') }
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(encender)
+  else encender()
+}
+
+/** The progress rail above each screen. Four segments, one screen each. */
+function armarRiel (lista) {
+  const n = Number(lista.dataset.paso)
+  lista.dataset.etiqueta = n === 0 ? 'Comparison' : `Step ${n} of 4`
+
+  for (let i = 1; i <= 4; i++) {
+    let clase = 'paso-seg'
+    if (n && i < n) clase = 'paso-seg paso-hecho'
+    if (n && i === n) clase = 'paso-seg paso-actual'
+    lista.appendChild(nodo('li', clase))
+  }
+}
+
+function cargando (visible, texto = 'Asking the engine…') {
   $('cargando-texto').textContent = texto
   $('cargando').hidden = !visible
 }
@@ -107,10 +145,16 @@ function mostrarError (contenedor, err) {
 /* --------------------------------------------------------------- inicio --- */
 
 async function iniciar () {
-  for (const lista of document.querySelectorAll('.pasos')) {
-    const n = lista.dataset.paso
-    lista.dataset.etiqueta = n === '0' ? 'Comparacion' : `Paso ${n} de 4`
-  }
+  document.body.classList.add('revelar')
+
+  for (const lista of document.querySelectorAll('.pasos')) armarRiel(lista)
+
+  const barra = $('barra')
+  const alDesplazar = () => barra.classList.toggle('desplazada', window.scrollY > 8)
+  window.addEventListener('scroll', alDesplazar, { passive: true })
+  alDesplazar()
+
+  revelar(document.getElementById('pantalla-cargar'))
 
   for (const boton of document.querySelectorAll('[data-ir]')) {
     boton.addEventListener('click', () => mostrar(boton.dataset.ir))
@@ -161,16 +205,16 @@ async function cargarSalud () {
     estado.simbolo = salud.token.symbol
 
     limpiar(barra)
-    barra.appendChild(etiquetaDato('Red', salud.red))
+    barra.appendChild(etiquetaDato('Network', salud.red))
     barra.appendChild(etiquetaDato('Token', `${salud.token.symbol} · ${salud.token.decimals} dec`))
-    barra.appendChild(etiquetaDato('Acumulado hoy', `${dia.gastado.legible} / ${dia.tope.legible}`))
+    barra.appendChild(etiquetaDato('Spent today', `${dia.gastado.legible} / ${dia.tope.legible}`))
 
-    const modo = etiquetaDato('Modo', salud.modo)
+    const modo = etiquetaDato('Mode', salud.modo)
     modo.classList.add('dato-modo')
     barra.appendChild(modo)
   } catch (err) {
     limpiar(barra)
-    const aviso = nodo('span', 'dato dato-error', `${err?.code ?? 'error'}: motor no disponible`)
+    const aviso = nodo('span', 'dato dato-error', `${err?.code ?? 'error'}: engine unavailable`)
     barra.appendChild(aviso)
     mostrarError($('error-cargar'), err)
   }
@@ -189,9 +233,9 @@ async function cargarPoliticas () {
 
     const topes = $('topes')
     limpiar(topes)
-    topes.appendChild(tope('Tope por transferencia', `${p.topePorTransferencia.legible} ${p.token.symbol}`, `${p.topePorTransferencia.base} unidades base`))
-    topes.appendChild(tope('Tope diario', `${p.topeDiario.legible} ${p.token.symbol}`, `${p.topeDiario.base} unidades base`))
-    topes.appendChild(tope('Destinatarios permitidos', String(p.destinatariosPermitidos), 'direcciones en la allowlist'))
+    topes.appendChild(tope('Per-transfer cap', `${p.topePorTransferencia.legible} ${p.token.symbol}`, `${p.topePorTransferencia.base} base units`))
+    topes.appendChild(tope('Daily cap', `${p.topeDiario.legible} ${p.token.symbol}`, `${p.topeDiario.base} base units`))
+    topes.appendChild(tope('Allowed recipients', String(p.destinatariosPermitidos), 'addresses on the allowlist'))
 
     const cuerpo = $('cuerpo-politicas')
     limpiar(cuerpo)
@@ -212,8 +256,9 @@ async function cargarPoliticas () {
     }
 
     $('panel-politicas').hidden = false
+    revelar(document.getElementById('pantalla-cargar'))
   } catch {
-    // La barra superior ya reporta que el motor no responde.
+    // The top bar already reports that the engine is not answering.
   }
 }
 
@@ -244,11 +289,11 @@ async function correrNomina () {
 
   try {
     if ($('campo-reiniciar').checked) {
-      cargando(true, 'Reiniciando el acumulado del dia…')
+      cargando(true, "Resetting today's accumulator…")
       await reiniciarDia()
     }
 
-    cargando(true, 'El motor esta armando el plan y consultando las politicas…')
+    cargando(true, 'The engine is building the plan and asking the policies…')
     const { recibo, markdown } = await unaCorrida(estado.nomina)
 
     estado.recibo = recibo
@@ -274,9 +319,9 @@ async function correrNomina () {
 /* ----------------------------------------------------------------- plan --- */
 
 /**
- * El plan se proyecta del recibo, que es lo que devuelve la API.
- * Una linea sin destinatario es una abstencion del planner; el resto son las
- * lineas que se propusieron. En esta pantalla no se muestra ningun veredicto.
+ * The plan is projected out of the receipt, which is what the API returns.
+ * A line with no recipient is an abstention by the planner; the rest are the
+ * lines it proposed. No verdict is shown on this screen.
  */
 function separarPlan (recibo) {
   const propuestas = recibo.lines.filter((l) => l.to !== null && l.to !== undefined)
@@ -291,8 +336,8 @@ function pintarPlan () {
 
   const total = propuestas.reduce((acc, l) => acc + BigInt(l.amount ?? 0), 0n)
   $('resumen-plan').textContent =
-    `El planner propuso ${propuestas.length} pagos por ${formatear(total, d)} ${estado.simbolo} en total, ` +
-    `y se abstuvo en ${abstenciones.length} filas. Instruccion: "${recibo.run.instruction}".`
+    `The planner proposed ${propuestas.length} payments for ${formatear(total, d)} ${estado.simbolo} in total, ` +
+    `and abstained on ${abstenciones.length} rows. Instruction: "${recibo.run.instruction}".`
 
   const cuerpo = $('cuerpo-plan')
   limpiar(cuerpo)
@@ -322,7 +367,7 @@ function pintarPlan () {
   for (const l of abstenciones) {
     const tr = document.createElement('tr')
     tr.appendChild(nodo('td', null, l.row))
-    tr.appendChild(nodo('td', 'abstencion', l.why ?? 'sin razon declarada'))
+    tr.appendChild(nodo('td', 'abstencion', l.why ?? 'no reason stated'))
     cuerpoAbs.appendChild(tr)
   }
 }
@@ -336,16 +381,16 @@ function pintarVeredicto () {
 
   const contadores = $('contadores')
   limpiar(contadores)
-  contadores.appendChild(contador('ejecutada', t.ejecutadas, 'ejecutadas', `${formatear(t.montoEjecutado, d)} ${estado.simbolo}`))
-  contadores.appendChild(contador('denegada', t.denegadas, 'denegadas', `${formatear(t.montoDenegado, d)} ${estado.simbolo} frenados`))
-  contadores.appendChild(contador('no_intentada', t.no_intentadas, 'no intentadas', 'sin dato suficiente'))
-  contadores.appendChild(contador('total', t.lineas, 'lineas en total', 'del archivo'))
+  contadores.appendChild(contador('ejecutada', t.ejecutadas, 'executed', `${formatear(t.montoEjecutado, d)} ${estado.simbolo}`))
+  contadores.appendChild(contador('denegada', t.denegadas, 'denied', `${formatear(t.montoDenegado, d)} ${estado.simbolo} stopped`))
+  contadores.appendChild(contador('no_intentada', t.no_intentadas, 'not attempted', 'not enough data'))
+  contadores.appendChild(contador('total', t.lineas, 'lines in total', 'in the file'))
 
   const suma = $('cuadratura')
   limpiar(suma)
   suma.className = `cuadratura ${t.cuadra ? 'cuadratura-ok' : 'cuadratura-mal'}`
-  suma.appendChild(nodo('span', 'suma', `${t.ejecutadas} + ${t.denegadas} + ${t.no_intentadas} = ${t.ejecutadas + t.denegadas + t.no_intentadas} de ${t.lineas} lineas. `))
-  suma.appendChild(document.createTextNode(t.cuadra ? 'La suma cuadra.' : 'LA SUMA NO CUADRA.'))
+  suma.appendChild(nodo('span', 'suma', `${t.ejecutadas} + ${t.denegadas} + ${t.no_intentadas} = ${t.ejecutadas + t.denegadas + t.no_intentadas} of ${t.lineas} lines. `))
+  suma.appendChild(document.createTextNode(t.cuadra ? 'The sum balances.' : 'THE SUM DOES NOT BALANCE.'))
 
   const cuerpo = $('cuerpo-veredicto')
   limpiar(cuerpo)
@@ -380,7 +425,7 @@ function contador (clase, cifra, nombre, detalle) {
   return el
 }
 
-/** La columna que importa: la traza real de la politica que denego. */
+/** The column that matters: the real trace of the policy that denied. */
 function celdaPorQue (l) {
   const td = document.createElement('td')
 
@@ -393,12 +438,12 @@ function celdaPorQue (l) {
   }
 
   if (l.estado === 'no_intentada') {
-    td.appendChild(nodo('span', 'abstencion', l.why ?? 'sin razon declarada'))
+    td.appendChild(nodo('span', 'abstencion', l.why ?? 'no reason stated'))
     return td
   }
 
-  const partes = [l.dryRun ? 'dry-run: no se envio nada' : 'enviada']
-  if (l.feeEstimada) partes.push(`comision estimada ${l.feeEstimada} wei`)
+  const partes = [l.dryRun ? 'dry-run: nothing was sent' : 'sent']
+  if (l.feeEstimada) partes.push(`estimated fee ${l.feeEstimada} wei`)
   if (l.quoteExacto === false && l.quoteNota) partes.push(l.quoteNota)
   if (l.txHash) partes.push(`tx ${l.txHash}`)
 
@@ -414,14 +459,14 @@ function pintarRecibo () {
   limpiar(ficha)
 
   const campos = [
-    ['Corrida', recibo.run.id],
-    ['Modo', recibo.run.mode],
-    ['Red', recibo.run.network ?? '—'],
+    ['Run', recibo.run.id],
+    ['Mode', recibo.run.mode],
+    ['Network', recibo.run.network ?? '—'],
     ['Token', recibo.run.token ? `${recibo.run.token.slug.toUpperCase()} · ${recibo.run.token.decimals} dec` : '—'],
-    ['Archivo de entrada', recibo.run.inputFile ?? '—'],
-    ['sha256 del archivo', recibo.run.inputSha256 ?? '—'],
-    ['Planner', recibo.run.planner ? (recibo.run.planner.used ? `LLM ${recibo.run.planner.model}` : 'reglas deterministas') : '—'],
-    ['Version del contrato', recibo.version]
+    ['Input file', recibo.run.inputFile ?? '—'],
+    ['sha256 of the file', recibo.run.inputSha256 ?? '—'],
+    ['Planner', recibo.run.planner ? (recibo.run.planner.used ? `LLM ${recibo.run.planner.model}` : 'deterministic rules') : '—'],
+    ['Contract version', recibo.version]
   ]
 
   for (const [nombre, valor] of campos) {
@@ -454,7 +499,7 @@ function pintarRecibo () {
     const tr = document.createElement('tr')
     tr.appendChild(nodo('td', 'mono', p.id))
     tr.appendChild(nodo('td', null, p.scope))
-    tr.appendChild(nodo('td', 'concepto', p.estadoFinal ? `${p.estadoFinal} unidades base usadas hoy` : '—'))
+    tr.appendChild(nodo('td', 'concepto', p.estadoFinal ? `${p.estadoFinal} base units used today` : '—'))
     aplicadas.appendChild(tr)
   }
 }
@@ -471,9 +516,9 @@ function descargarRecibo () {
 }
 
 /**
- * Render del markdown que devuelve la API. Cubre solo lo que el recibo usa:
- * titulos, parrafos, tablas, negrita y codigo. Todo el texto entra por
- * textContent, asi que nada de lo que venga en el recibo se interpreta como HTML.
+ * Renders the markdown the API returns. It covers only what the receipt uses:
+ * headings, paragraphs, tables, bold and code. Every string goes in through
+ * textContent, so nothing arriving in a receipt is ever read as HTML.
  */
 function renderMarkdown (texto) {
   const raiz = document.createDocumentFragment()
@@ -519,7 +564,7 @@ function filaTabla (linea, etiqueta) {
   return tr
 }
 
-/** Negrita y codigo en linea, construidos como nodos: nunca innerHTML. */
+/** Inline bold and code, built as nodes: never innerHTML. */
 function conFormato (etiqueta, texto) {
   const el = document.createElement(etiqueta)
 
@@ -539,11 +584,11 @@ async function compararNominas () {
   $('error-cargar').hidden = true
 
   try {
-    cargando(true, 'Corrida 1 de 2: nomina limpia…')
+    cargando(true, 'Run 1 of 2: the clean payroll…')
     await reiniciarDia()
     const limpia = await unaCorrida('limpia')
 
-    cargando(true, 'Corrida 2 de 2: nomina con inyeccion…')
+    cargando(true, 'Run 2 of 2: the poisoned payroll…')
     await reiniciarDia()
     const envenenada = await unaCorrida('envenenada')
 
@@ -561,7 +606,7 @@ async function compararNominas () {
   }
 }
 
-/** Compara los campos que deciden dinero. El concepto queda fuera a proposito: es el texto que cambia. */
+/** Compares the fields that decide money. The description is left out on purpose: it is the text that changes. */
 function huella (l) {
   return JSON.stringify({
     row: l.row,
@@ -597,7 +642,7 @@ function pintarComparacion (limpia, envenenada) {
     tr.appendChild(b ? celdaLado(b, d) : nodo('td', null, 'sin linea'))
 
     const igual = document.createElement('td')
-    igual.appendChild(nodo('span', mismo ? 'igual-si' : 'igual-no', mismo ? 'identico' : 'distinto'))
+    igual.appendChild(nodo('span', mismo ? 'igual-si' : 'igual-no', mismo ? 'identical' : 'different'))
     tr.appendChild(igual)
 
     cuerpo.appendChild(tr)
@@ -609,12 +654,12 @@ function pintarComparacion (limpia, envenenada) {
   limpiar(banner)
   banner.className = `banner ${todoIgual ? 'banner-igual' : 'banner-distinto'}`
   banner.appendChild(nodo('span', 'banner-titulo', todoIgual
-    ? `Mismo veredicto en las ${limpia.lines.length} lineas`
-    : `${limpia.lines.length - iguales} de ${limpia.lines.length} lineas cambiaron`))
+    ? `Same verdict on all ${limpia.lines.length} lines`
+    : `${limpia.lines.length - iguales} of ${limpia.lines.length} lines changed`))
   banner.appendChild(nodo('span', 'banner-detalle', todoIgual
-    ? `El archivo envenenado trae instrucciones incrustadas en ${inyectadas.length} filas y no movio una sola decision. `
-      + `Los dos recibos: ${limpia.totals.ejecutadas} ejecutadas, ${limpia.totals.denegadas} denegadas, ${limpia.totals.no_intentadas} no intentadas.`
-    : 'Revisa fila por fila cual cambio y por que.'))
+    ? `The poisoned file carries instructions embedded in ${inyectadas.length} rows and moved not one decision. `
+      + `Both receipts: ${limpia.totals.ejecutadas} ejecutadas, ${limpia.totals.denegadas} denegadas, ${limpia.totals.no_intentadas} no intentadas.`
+    : 'Check row by row which one changed and why.'))
 
   const bloque = $('bloque-inyeccion')
   const lista = $('lista-inyeccion')
@@ -623,16 +668,16 @@ function pintarComparacion (limpia, envenenada) {
 
   for (const item of inyectadas) {
     const caja = nodo('div', 'inyeccion')
-    caja.appendChild(nodo('span', 'inyeccion-fila', `Fila ${item.fila} · columna concepto`))
+    caja.appendChild(nodo('span', 'inyeccion-fila', `Row ${item.fila} · description column`))
     caja.appendChild(nodo('span', 'inyeccion-texto', item.sucio))
 
     const efecto = nodo('span', 'inyeccion-efecto')
-    efecto.appendChild(document.createTextNode('Veredicto del motor para esa fila: '))
+    efecto.appendChild(document.createTextNode("The engine's verdict for that row: "))
     efecto.appendChild(nodo('span', `chip chip-${item.linea.estado}`, item.linea.estado.replace('_', ' ')))
     efecto.appendChild(document.createTextNode(
       item.linea.policy
-        ? ` por ${item.linea.policy.id} / ${item.linea.policy.rule}. El mismo que con el texto "${item.limpio}".`
-        : `. El mismo que con el texto "${item.limpio}".`
+        ? ` by ${item.linea.policy.id} / ${item.linea.policy.rule}. The same one it gave with the text "${item.limpio}".`
+        : `. The same one it gave with the text "${item.limpio}".`
     ))
     caja.appendChild(efecto)
 
@@ -667,7 +712,7 @@ async function simularLinea () {
   }
 
   try {
-    cargando(true, 'Preguntando al motor de politicas…')
+    cargando(true, 'Asking the policy engine…')
     const v = await pedir('/api/simular', {
       method: 'POST',
       body: JSON.stringify({ destinatario: $('campo-destinatario').value.trim(), monto_base: monto.base })
@@ -678,14 +723,14 @@ async function simularLinea () {
     caja.appendChild(nodo('div', 'veredicto-decision', v.decision))
     caja.appendChild(nodo('div', 'denegacion-regla', `${v.politica} / ${v.regla}`))
     caja.appendChild(nodo('div', 'denegacion-razon', v.razon))
-    caja.appendChild(nodo('div', 'nota-ejecucion', `Monto consultado: ${v.monto.legible} ${estado.simbolo} (${v.monto.base} unidades base)`))
+    caja.appendChild(nodo('div', 'nota-ejecucion', `Amount asked about: ${v.monto.legible} ${estado.simbolo} (${v.monto.base} base units)`))
 
     if (Array.isArray(v.traza) && v.traza.length) {
       const traza = nodo('div', 'traza')
-      traza.appendChild(nodo('div', 'inyeccion-fila', 'Traza de la evaluacion'))
+      traza.appendChild(nodo('div', 'inyeccion-fila', 'Evaluation trace'))
       for (const paso of v.traza) {
         traza.appendChild(nodo('div', `traza-linea ${paso.matched ? 'traza-si' : ''}`,
-          `${paso.matched ? '>' : ' '} ${paso.policy_id} / ${paso.rule_name} — ${paso.matched ? 'aplica' : 'no aplica'}`))
+          `${paso.matched ? '>' : ' '} ${paso.policy_id} / ${paso.rule_name} — ${paso.matched ? 'matched' : 'no match'}`))
       }
       caja.appendChild(traza)
     }

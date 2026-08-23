@@ -1,83 +1,123 @@
 <!DOCTYPE html>
-<html lang="es">
+<!-- Cerrojo — local demo front-end. This page renders; it never decides.
+     Every verdict on screen is a field of an API response. The interface is in
+     English; the engine's own strings — the three states, the policy reasons,
+     the receipt — are shown exactly as the engine wrote them. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cerrojo — nomina con politicas</title>
+<meta name="theme-color" content="#faf5ea">
+<meta name="description" content="Cerrojo: the agent proposes a payment plan and the WDK policy engine decides, line by line, with the rule and the reason in plain view.">
+<title>Cerrojo — the agent proposes, the lock decides</title>
 <link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 
-<header class="barra">
-  <div class="marca">
-    <span class="marca-nombre">Cerrojo</span>
-    <span class="marca-lema">El agente propone. El cerrojo decide.</span>
-  </div>
+<div class="atmosfera" aria-hidden="true">
+  <span class="mancha mancha-a"></span>
+  <span class="mancha mancha-b"></span>
+  <span class="reticula"></span>
+</div>
+
+<header class="barra" id="barra">
+  <a class="marca" href="#top">
+    <span class="marca-sello" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>
+      </svg>
+    </span>
+    <span class="marca-textos">
+      <span class="marca-nombre">Cerrojo</span>
+      <span class="marca-lema">The agent proposes. The lock decides.</span>
+    </span>
+  </a>
   <div class="barra-datos" id="barra-datos">
-    <span class="dato dato-cargando" id="dato-salud">conectando con el motor…</span>
+    <span class="dato dato-cargando" id="dato-salud">connecting to the engine…</span>
   </div>
 </header>
 
-<main>
+<main id="top">
 
-  <!-- 1. CARGAR -->
+  <!-- 1. LOAD -->
   <section class="pantalla activa" id="pantalla-cargar">
     <ol class="pasos" data-paso="1"></ol>
 
-    <h1>Preparar la corrida</h1>
-    <p class="entradilla">
-      Elige el archivo de nomina y escribe la instruccion. El motor arma un plan y lo pasa por las
-      politicas antes de mover un solo peso.
-    </p>
-
-    <h2>1 · Archivo de nomina</h2>
-    <div class="opciones" id="opciones-nomina"></div>
-
-    <h2>2 · Instruccion</h2>
-    <input class="instruccion" id="campo-instruccion" type="text"
-           value="paga la nomina de agosto" autocomplete="off" spellcheck="false">
-
-    <label class="casilla">
-      <input type="checkbox" id="campo-reiniciar" checked>
-      <span>
-        Reiniciar el acumulado del dia antes de correr
-        <small>Equivale a <code>cerrojo run --reset-dia</code>. El tope diario se sigue aplicando entero dentro de la corrida.</small>
-      </span>
-    </label>
-
-    <div class="acciones">
-      <button class="boton boton-primario" id="boton-correr">Armar el plan</button>
-      <button class="boton boton-secundario" id="boton-comparar">Comparar limpia contra envenenada</button>
+    <div class="portada">
+      <span class="rotulo rv">WDK policy engine · dry-run</span>
+      <h1 class="rv">No instruction typed into a payroll<br><em>moves a single cent.</em></h1>
+      <p class="entradilla entradilla-ancha rv">
+        The planner reads the file and proposes payments. That is all it does. Every proposed line is
+        judged by the policy engine, out of the model's reach, and what you see here is its verdict:
+        the rule that matched and the reason that travels to the receipt.
+      </p>
+      <div class="topes rv" id="topes"></div>
     </div>
 
-    <p class="error" id="error-cargar" hidden></p>
+    <div class="tarjeta tarjeta-forma rv">
+      <h2 class="titulo-paso"><span class="indice">1</span> Payroll file</h2>
+      <div class="opciones" id="opciones-nomina"></div>
 
-    <details class="probador">
-      <summary>Probador de politica — una sola linea</summary>
+      <h2 class="titulo-paso"><span class="indice">2</span> Instruction for the planner</h2>
+      <input class="instruccion" id="campo-instruccion" type="text"
+             value="paga la nomina de agosto" autocomplete="off" spellcheck="false">
+
+      <label class="casilla">
+        <input type="checkbox" id="campo-reiniciar" checked>
+        <span>
+          Reset today's accumulator before running
+          <small>The same thing <code>cerrojo run --reset-dia</code> does. The daily cap is still enforced in full inside the run.</small>
+        </span>
+      </label>
+
+      <div class="acciones">
+        <button class="boton boton-primario" id="boton-correr">
+          Build the plan
+          <svg class="boton-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        <button class="boton boton-secundario" id="boton-comparar">Compare clean against poisoned</button>
+      </div>
+
+      <p class="error" id="error-cargar" hidden></p>
+    </div>
+
+    <details class="probador rv">
+      <summary>
+        <span class="probador-titulo">Policy probe — one single line</span>
+        <span class="probador-pista">POST /simular</span>
+      </summary>
       <p class="entradilla">
-        Consulta directa al motor: <code>POST /simular</code>. No envia nada, solo pregunta.
+        A direct question to the engine. It sends nothing: it only asks what would happen with one
+        recipient and one amount.
       </p>
       <div class="probador-campos">
-        <label>Destinatario
+        <label>Recipient
           <input id="campo-destinatario" type="text" spellcheck="false"
                  value="0x000000000000000000000000000000000000dEaD">
         </label>
-        <label>Monto en USDT
+        <label>Amount in USDT
           <input id="campo-monto" type="text" spellcheck="false" value="400">
         </label>
-        <button class="boton boton-secundario" id="boton-simular">Preguntar al cerrojo</button>
+        <button class="boton boton-secundario" id="boton-simular">Ask the lock</button>
       </div>
       <div id="salida-simular"></div>
     </details>
 
-    <section class="politicas" id="panel-politicas" hidden>
-      <h2>Politicas activas</h2>
-      <div class="topes" id="topes"></div>
-      <table class="tabla tabla-politicas">
-        <thead><tr><th>Politica</th><th>Regla</th><th>Accion</th><th>Razon que viaja al recibo</th></tr></thead>
-        <tbody id="cuerpo-politicas"></tbody>
-      </table>
+    <section class="politicas rv" id="panel-politicas" hidden>
+      <h2>Active policies</h2>
+      <p class="entradilla">
+        Registered in the engine before the account exists. The browser evaluates none of them: it reads them.
+      </p>
+      <div class="tabla-marco">
+        <table class="tabla tabla-politicas">
+          <thead><tr><th>Policy</th><th>Rule</th><th>Action</th><th>Reason that travels to the receipt</th></tr></thead>
+          <tbody id="cuerpo-politicas"></tbody>
+        </table>
+      </div>
     </section>
   </section>
 
@@ -85,115 +125,139 @@
   <section class="pantalla" id="pantalla-plan">
     <ol class="pasos" data-paso="2"></ol>
 
-    <h1>Lo que propuso el planner</h1>
-    <p class="entradilla" id="resumen-plan"></p>
+    <h1 class="rv">What the planner proposed</h1>
+    <p class="entradilla rv" id="resumen-plan"></p>
 
-    <div class="aviso aviso-neutro">
-      Todavia no hay ninguna decision en esta pantalla. El concepto se muestra tal como venia en el
-      archivo: es dato, no una instruccion.
+    <div class="aviso aviso-neutro rv">
+      There is not one decision on this screen yet. The description column is shown exactly as it
+      arrived in the file: it is data, not an instruction.
     </div>
 
-    <table class="tabla tabla-plan">
-      <thead><tr><th class="col-num">#</th><th>Destinatario</th><th class="col-monto">Monto</th><th>Concepto (texto del archivo)</th></tr></thead>
-      <tbody id="cuerpo-plan"></tbody>
-    </table>
-
-    <section id="bloque-abstenciones" hidden>
-      <h2>Filas que el planner no propuso</h2>
-      <p class="entradilla">
-        Abstenerse es un resultado valido: falta un dato y no se inventa un valor plausible.
-      </p>
-      <table class="tabla tabla-abstenciones">
-        <thead><tr><th class="col-num">#</th><th>Por que no se propuso</th></tr></thead>
-        <tbody id="cuerpo-abstenciones"></tbody>
+    <div class="tabla-marco rv">
+      <table class="tabla tabla-plan">
+        <thead><tr><th class="col-num">#</th><th>Recipient</th><th class="col-monto">Amount</th><th>Description (text from the file)</th></tr></thead>
+        <tbody id="cuerpo-plan"></tbody>
       </table>
+    </div>
+
+    <section class="rv" id="bloque-abstenciones" hidden>
+      <h2>Rows the planner did not propose</h2>
+      <p class="entradilla">
+        Abstaining is a valid outcome: a field is missing and no plausible value is invented for it.
+      </p>
+      <div class="tabla-marco">
+        <table class="tabla tabla-abstenciones">
+          <thead><tr><th class="col-num">#</th><th>Why it was not proposed</th></tr></thead>
+          <tbody id="cuerpo-abstenciones"></tbody>
+        </table>
+      </div>
     </section>
 
-    <div class="acciones">
-      <button class="boton boton-primario" id="boton-veredicto">Pasar por el cerrojo</button>
-      <button class="boton boton-terciario" data-ir="pantalla-cargar">Volver</button>
+    <div class="acciones rv">
+      <button class="boton boton-primario" id="boton-veredicto">
+        Run it past the lock
+        <svg class="boton-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+      <button class="boton boton-terciario" data-ir="pantalla-cargar">Back</button>
     </div>
   </section>
 
-  <!-- 3. VEREDICTO -->
+  <!-- 3. VERDICT -->
   <section class="pantalla" id="pantalla-veredicto">
     <ol class="pasos" data-paso="3"></ol>
 
-    <h1>El veredicto de las politicas</h1>
+    <h1 class="rv">The verdict of the policies</h1>
+    <p class="entradilla rv">
+      Every line ends in exactly one of three states. The state, the rule and the reason are the
+      engine's own words, printed here untranslated.
+    </p>
 
-    <div class="contadores" id="contadores"></div>
-    <div class="cuadratura" id="cuadratura"></div>
+    <div class="contadores rv" id="contadores"></div>
+    <div class="cuadratura rv" id="cuadratura"></div>
 
-    <table class="tabla tabla-veredicto">
-      <thead><tr><th class="col-num">#</th><th class="col-estado">Estado</th><th>Destinatario</th><th class="col-monto">Monto</th><th>Por que</th></tr></thead>
-      <tbody id="cuerpo-veredicto"></tbody>
-    </table>
+    <div class="tabla-marco rv">
+      <table class="tabla tabla-veredicto">
+        <thead><tr><th class="col-num">#</th><th class="col-estado">State</th><th>Recipient</th><th class="col-monto">Amount</th><th>Why</th></tr></thead>
+        <tbody id="cuerpo-veredicto"></tbody>
+      </table>
+    </div>
 
-    <div class="acciones">
-      <button class="boton boton-primario" id="boton-recibo">Ver el recibo</button>
-      <button class="boton boton-terciario" data-ir="pantalla-plan">Volver al plan</button>
+    <div class="acciones rv">
+      <button class="boton boton-primario" id="boton-recibo">
+        See the receipt
+        <svg class="boton-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+      <button class="boton boton-terciario" data-ir="pantalla-plan">Back to the plan</button>
     </div>
   </section>
 
-  <!-- 4. RECIBO -->
+  <!-- 4. RECEIPT -->
   <section class="pantalla" id="pantalla-recibo">
     <ol class="pasos" data-paso="4"></ol>
 
-    <h1>Recibo de la corrida</h1>
+    <h1 class="rv">Receipt for this run</h1>
+    <p class="entradilla rv">
+      The same document the CLI writes into <code>code/runs/</code>: the header first, then the
+      receipt as the engine rendered it, then the deterministic checks.
+    </p>
 
-    <dl class="ficha" id="ficha-recibo"></dl>
+    <dl class="ficha rv" id="ficha-recibo"></dl>
 
-    <div class="recibo-md" id="recibo-md"></div>
+    <div class="recibo-md rv" id="recibo-md"></div>
 
-    <h2>Chequeos deterministas</h2>
-    <div class="chequeos" id="chequeos"></div>
+    <h2 class="rv">Deterministic checks</h2>
+    <div class="chequeos rv" id="chequeos"></div>
 
-    <h2>Politicas aplicadas</h2>
-    <table class="tabla">
-      <thead><tr><th>Politica</th><th>Alcance</th><th>Estado al cerrar</th></tr></thead>
-      <tbody id="cuerpo-aplicadas"></tbody>
-    </table>
+    <h2 class="rv">Policies applied</h2>
+    <div class="tabla-marco rv">
+      <table class="tabla">
+        <thead><tr><th>Policy</th><th>Scope</th><th>State at close</th></tr></thead>
+        <tbody id="cuerpo-aplicadas"></tbody>
+      </table>
+    </div>
 
-    <div class="acciones">
-      <button class="boton boton-secundario" id="boton-descargar">Descargar recibo.json</button>
-      <button class="boton boton-terciario" data-ir="pantalla-cargar">Nueva corrida</button>
+    <div class="acciones rv">
+      <button class="boton boton-secundario" id="boton-descargar">Download recibo.json</button>
+      <button class="boton boton-terciario" data-ir="pantalla-cargar">New run</button>
     </div>
   </section>
 
-  <!-- COMPARACION -->
+  <!-- COMPARISON -->
   <section class="pantalla" id="pantalla-comparar">
     <ol class="pasos" data-paso="0"></ol>
 
-    <h1>Limpia contra envenenada</h1>
-    <p class="entradilla">
-      Dos corridas reales, cada una desde el mismo acumulado diario en cero. El unico cambio entre
-      los dos archivos es el texto de la columna concepto.
+    <h1 class="rv">Clean against <em>poisoned</em></h1>
+    <p class="entradilla entradilla-ancha rv">
+      Two real runs, each one from the same daily accumulator at zero. The only difference between
+      the two files is the text in the description column.
     </p>
 
-    <div id="banner-comparar"></div>
+    <div class="rv" id="banner-comparar"></div>
 
-    <table class="tabla tabla-comparar">
-      <thead>
-        <tr>
-          <th class="col-num">#</th>
-          <th>Nomina limpia</th>
-          <th>Nomina envenenada</th>
-          <th class="col-igual">Mismo veredicto</th>
-        </tr>
-      </thead>
-      <tbody id="cuerpo-comparar"></tbody>
-    </table>
+    <div class="tabla-marco rv">
+      <table class="tabla tabla-comparar">
+        <thead>
+          <tr>
+            <th class="col-num">#</th>
+            <th>Clean payroll</th>
+            <th>Poisoned payroll</th>
+            <th class="col-igual">Same verdict</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpo-comparar"></tbody>
+      </table>
+    </div>
 
-    <section id="bloque-inyeccion" hidden>
-      <h2>El texto inyectado, tal como llego al recibo</h2>
+    <section class="rv" id="bloque-inyeccion" hidden>
+      <h2>The injected text, exactly as it reached the receipt</h2>
       <p class="entradilla">
-        Viajo por todo el sistema como dato. No cambio ningun veredicto.
+        It travelled through the whole system as data. It moved no verdict.
       </p>
       <div id="lista-inyeccion"></div>
     </section>
 
-    <div class="acciones">
-      <button class="boton boton-terciario" data-ir="pantalla-cargar">Volver</button>
+    <div class="acciones rv">
+      <button class="boton boton-terciario" data-ir="pantalla-cargar">Back</button>
     </div>
   </section>
 
@@ -201,15 +265,20 @@
 
 <div class="cargando" id="cargando" hidden>
   <div class="cargando-caja">
+    <span class="cargando-aro" aria-hidden="true"></span>
     <div class="cargando-barra"><span></span></div>
-    <p id="cargando-texto">Consultando al motor…</p>
+    <p id="cargando-texto">Asking the engine…</p>
   </div>
 </div>
 
 <footer class="pie">
-  Ningun veredicto de esta pantalla lo calcula el navegador. Todos vienen de la API de Cerrojo,
-  que consulta el motor de politicas de WDK. Esta app no puede enviar fondos: no existe un endpoint
-  que ejecute en vivo.
+  <p class="pie-principal">
+    Not one verdict on this screen is computed by the browser. They all come from the Cerrojo API,
+    which asks the WDK policy engine.
+  </p>
+  <p class="pie-secundario">
+    This app cannot send funds: no endpoint exists that executes live.
+  </p>
 </footer>
 
 <script src="/app.js" type="module"></script>

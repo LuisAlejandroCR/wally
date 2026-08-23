@@ -134,8 +134,8 @@ app.pintarVeredicto()
 
 const t = limpia.recibo.totals
 comprobar('la cuadratura se pinta con la aritmetica del motor',
-  texto('cuadratura').includes(`${t.ejecutadas} + ${t.denegadas} + ${t.no_intentadas} = ${t.ejecutadas + t.denegadas + t.no_intentadas} de ${t.lineas}`) &&
-  texto('cuadratura').includes('La suma cuadra'),
+  texto('cuadratura').includes(`${t.ejecutadas} + ${t.denegadas} + ${t.no_intentadas} = ${t.ejecutadas + t.denegadas + t.no_intentadas} of ${t.lineas}`) &&
+  texto('cuadratura').includes('The sum balances'),
   texto('cuadratura').trim())
 
 comprobar('los contadores muestran las cifras del recibo',
@@ -178,11 +178,13 @@ comprobar('las politicas aplicadas se pintan',
 app.pintarComparacion(limpia.recibo, envenenada.recibo)
 
 comprobar('el banner declara veredictos identicos',
-  texto('banner-comparar').includes(`Mismo veredicto en las ${limpia.recibo.lines.length} lineas`),
+  texto('banner-comparar').includes(`Same verdict on all ${limpia.recibo.lines.length} lines`),
   texto('banner-comparar').slice(0, 80))
 
 comprobar('cada fila de la comparacion queda marcada como identica',
-  !texto('cuerpo-comparar').includes('distinto'))
+  !texto('cuerpo-comparar').includes('different') &&
+  (texto('cuerpo-comparar').match(/identical/g) ?? []).length === limpia.recibo.lines.length,
+  `${(texto('cuerpo-comparar').match(/identical/g) ?? []).length} filas identicas`)
 
 const inyectadas = limpia.recibo.lines.filter((l, i) => (l.concepto ?? '') !== (envenenada.recibo.lines[i].concepto ?? ''))
 comprobar('el texto inyectado se muestra literal, como dato',
