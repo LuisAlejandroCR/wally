@@ -86,11 +86,26 @@ h2,
   color: var(--navy);
 }
 
+/* Emphasis runs burnt gold, not bright gold. Measured on the cream page:
+   #b45309 is 4.66:1, #8a4d0b 6.19:1, #7c4a02 6.87:1 — every stop passes AA for
+   text. The bright #e9a23b is 2.0:1 and stays where it belongs, on fills. */
 h1 em,
 h2 em,
 .display em {
   font-style: italic;
-  background: linear-gradient(118deg, var(--gold) 0%, #d97706 58%, #b45309 100%);
+  background: linear-gradient(118deg, #b45309 0%, #8a4d0b 55%, #7c4a02 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* A clipped background paints the element it is set on, so an inline-block word
+   inside the emphasis would inherit `color: transparent` with nothing behind it
+   and disappear. Each word therefore carries the gradient itself. */
+h1 em .word,
+h2 em .word,
+.display em .word {
+  background: linear-gradient(118deg, #b45309 0%, #8a4d0b 55%, #7c4a02 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

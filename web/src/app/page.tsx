@@ -28,13 +28,23 @@ function BigNumber ({
   )
 }
 
-/** The headline arrives a word at a time. Delays are the only choreography. */
+/**
+ * The headline arrives a word at a time.
+ *
+ * The space lives between the spans, never inside one: a word is
+ * `display: inline-block`, and a browser trims whitespace at the end of an
+ * inline-block, which glues the whole sentence together.
+ */
 function Headline ({ text, from = 0 }: { text: string; from?: number }) {
+  const words = text.split(' ')
   return (
     <>
-      {text.split(' ').map((w, i) => (
-        <span key={`${w}-${i}`} className="word" style={{ animationDelay: `${from + i * 85}ms` }}>
-          {w}{' '}
+      {words.map((w, i) => (
+        <span key={`${w}-${i}`}>
+          <span className="word" style={{ animationDelay: `${from + i * 85}ms` }}>
+            {w}
+          </span>
+          {i < words.length - 1 ? ' ' : null}
         </span>
       ))}
     </>
@@ -96,7 +106,7 @@ export default function Home () {
           Aleph Hackathon 2026 · WDK Track
         </p>
         <h1 className="max-w-4xl text-4xl font-bold leading-[1.06] sm:text-6xl">
-          <Headline text="AI can propose payments." from={120} />
+          <Headline text="AI can propose payments." from={120} />{' '}
           <em>
             <Headline text="It can’t decide where your money goes." from={480} />
           </em>

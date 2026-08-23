@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { Receipt } from '@/lib/cerrojo'
-import { Checks, FeeNote, ReceiptTable, RunMeta, Totals } from '@/components/Receipt'
+import { Checks, ExplorerNote, FeeNote, ReceiptTable, RunMeta, Totals } from '@/components/Receipt'
 
 const PAYROLLS = [
   { value: 'evals/fixtures/nomina_agosto.csv', label: 'August payroll (clean)' },
@@ -142,6 +142,7 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
           <h2 className="text-2xl font-bold">Receipt {receipt.run.id}</h2>
           <Totals receipt={receipt} />
           <ReceiptTable receipt={receipt} />
+          <ExplorerNote network={receipt.run.network} />
           <FeeNote receipt={receipt} />
           <Checks receipt={receipt} />
           <div className="rounded-xl border border-border bg-panel p-5">

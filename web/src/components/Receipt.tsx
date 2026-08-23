@@ -18,11 +18,26 @@ export function AddressLink ({ address, network }: { address: string | null; net
       href={url}
       target="_blank"
       rel="noreferrer"
-      title={`${address} — open on the ${network} explorer`}
+      title={`${address} — open on ${network}. Dry run: no transaction was broadcast, so the explorer lists none.`}
       className="font-mono text-xs text-blue underline decoration-dotted underline-offset-4 transition-colors hover:decoration-solid"
     >
       {shortAddress(address)}
     </a>
+  )
+}
+
+/**
+ * Said once, under the table, because an empty explorer page reads as a broken
+ * demo unless you know why it is empty — and why it is empty is the point.
+ */
+export function ExplorerNote ({ network }: { network: string }) {
+  return (
+    <p className="text-sm text-muted">
+      Recipients link to {network}. They show no transactions on purpose:{' '}
+      <span className="text-foreground">this run is a dry run</span>, so nothing was broadcast, and the payroll rows
+      are synthetic addresses. What the lock approved was simulated; what it refused never became a transaction to
+      look up.
+    </p>
   )
 }
 
@@ -251,6 +266,7 @@ export function Checks ({ receipt }: { receipt: Receipt }) {
 
 export function RunMeta ({ receipt, source }: { receipt: Receipt; source: string }) {
   const r = receipt.run
+  const tokenUrl = explorerAddressUrl(r.token.address, r.network)
   const items = [
     ['Run', r.id],
     ['Mode', r.mode],
@@ -270,6 +286,26 @@ export function RunMeta ({ receipt, source }: { receipt: Receipt; source: string
           <dd className="font-mono text-xs break-all">{v}</dd>
         </div>
       ))}
+      {/* The one address on this page with a populated explorer page: the token
+          contract is real and deployed, which the empty recipient pages are not. */}
+      <div>
+        <dt className="text-xs uppercase tracking-wider text-muted">Token contract</dt>
+        <dd className="font-mono text-xs break-all">
+          {tokenUrl ? (
+            <a
+              href={tokenUrl}
+              target="_blank"
+              rel="noreferrer"
+              title={`${r.token.address} on ${r.network}`}
+              className="text-blue underline decoration-dotted underline-offset-4 hover:decoration-solid"
+            >
+              {shortAddress(r.token.address)} ↗
+            </a>
+          ) : (
+            shortAddress(r.token.address)
+          )}
+        </dd>
+      </div>
     </dl>
   )
 }
