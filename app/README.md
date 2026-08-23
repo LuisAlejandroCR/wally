@@ -49,19 +49,25 @@ Then open <http://127.0.0.1:7070>.
 
 ## The four screens
 
-1. **Cargar** (load) — pick between the clean payroll and the poisoned one, write the instruction,
-   and decide whether to reset the day's accumulator. Below that, the active policies with their
-   caps and a single-line prober against `POST /simular`.
+The interface is in English. The engine's own strings are not, and they are shown untranslated: the
+three states (`ejecutada`, `denegada`, `no_intentada`), the policy ids and rule names, the denial
+reasons, the abstention reasons and the receipt markdown appear exactly as the engine wrote them.
+Rewording a verdict on the way to the screen is a way of quietly replacing it.
+
+1. **Load** — pick between the clean payroll and the poisoned one, write the instruction, and decide
+   whether to reset the day's accumulator. Above it, the caps and the allowlist size as `GET
+   /politicas` reports them; below it, the active policies and a single-line probe against
+   `POST /simular`.
 2. **Plan** — what the planner proposed: recipients, amounts and the description exactly as it came
    in the file. No verdict yet.
-3. **Veredicto** (verdict) — every line with its state, and the three figures adding up to the
-   total. Denied lines carry `politica / regla` and the engine's literal reason.
-4. **Recibo** (receipt) — the run's summary, the markdown the API returns, the deterministic checks
-   and the policies applied. The `recibo.json` can be downloaded.
+3. **Verdict** — every line with its state, and the three figures adding up to the total. Denied
+   lines carry `politica / regla` and the engine's literal reason.
+4. **Receipt** — the run's summary, the markdown the API returns, the deterministic checks and the
+   policies applied. The `recibo.json` can be downloaded.
 
-Separately there is **Comparar limpia contra envenenada** ("compare clean against poisoned"): two
-real runs, each from the same daily accumulator, placed side by side. It is the demonstration that
-the injected text travels all the way into the receipt as data and moves not one decision.
+Separately there is **Compare clean against poisoned**: two real runs, each from the same daily
+accumulator, placed side by side. It is the demonstration that the injected text travels all the way
+into the receipt as data and moves not one decision.
 
 ## What it consumes from the API
 
