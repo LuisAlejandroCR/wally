@@ -218,7 +218,12 @@ async function estatico (res, ruta) {
 
   try {
     const contenido = await readFile(destino)
-    res.writeHead(200, { 'content-type': TIPOS[extname(destino).toLowerCase()] ?? 'application/octet-stream' })
+    res.writeHead(200, {
+      'content-type': TIPOS[extname(destino).toLowerCase()] ?? 'application/octet-stream',
+      // The demo is edited while it is being watched. A cached stylesheet from
+      // ten minutes ago looking like "nothing changed" is not worth the bytes.
+      'cache-control': 'no-store'
+    })
     return res.end(contenido)
   } catch {
     return json(res, 404, error('E_NO_ENCONTRADO', `No existe ${ruta}`, 'Abre http://' + HOST + ':' + PUERTO + '/'))

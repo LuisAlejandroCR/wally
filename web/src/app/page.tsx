@@ -20,7 +20,7 @@ function BigNumber ({
   delay?: number
 }) {
   return (
-    <div className="count-in rounded-xl border border-border bg-panel p-5" style={{ animationDelay: `${delay}ms` }}>
+    <div className="count-in rise rounded-xl border border-border bg-panel p-5" style={{ animationDelay: `${delay}ms` }}>
       <div className={`text-4xl font-bold tabular-nums sm:text-5xl ${tone}`}>{value}</div>
       <div className="mt-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-muted">{label}</div>
     </div>
@@ -89,9 +89,12 @@ export default function Home () {
     <div className="space-y-20">
       {/* Hero */}
       <section className="space-y-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue">Aleph Hackathon 2026 · WDK Track</p>
-        <h1 className="max-w-4xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
-          AI can propose payments. It can&apos;t decide where your money goes.
+        <p className="inline-flex items-center gap-2.5 rounded-full border border-border bg-panel/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-navy">
+          <span aria-hidden="true" className="h-0.5 w-5 rounded bg-gold" />
+          Aleph Hackathon 2026 · WDK Track
+        </p>
+        <h1 className="max-w-4xl text-4xl font-bold leading-[1.06] sm:text-6xl">
+          AI can propose payments. It <em>can&apos;t decide</em> where your money goes.
         </h1>
         <p className="max-w-2xl text-lg leading-relaxed text-muted sm:text-xl">
           Cerrojo puts deterministic controls between an AI agent and real wallet execution. The limits live in the
@@ -101,13 +104,13 @@ export default function Home () {
         <div className="flex flex-wrap gap-3">
           <Link
             href="/operator"
-            className="rounded-lg bg-blue px-5 py-2.5 font-semibold text-on-blue transition-opacity hover:opacity-90"
+            className="rounded-full bg-gold px-5 py-2.5 font-semibold text-navy shadow-[0_14px_30px_-12px_rgba(233,162,59,0.75)] transition-colors hover:bg-gold-2"
           >
             Run the live demo →
           </Link>
           <Link
             href="#how-it-works"
-            className="rounded-lg border border-border bg-panel px-5 py-2.5 font-semibold transition-colors hover:bg-panel-high"
+            className="rounded-full border border-border bg-panel px-5 py-2.5 font-semibold transition-colors hover:bg-panel-high"
           >
             See how Cerrojo works
           </Link>
@@ -125,7 +128,7 @@ export default function Home () {
         </h2>
         <div className="grid gap-4 sm:grid-cols-3">
           {PROBLEM.map((c) => (
-            <div key={c.n} className="rounded-xl border border-border bg-panel p-5">
+            <div key={c.n} className="rise rounded-xl border border-border bg-panel p-5">
               <span className="font-mono text-sm font-semibold text-blue">{c.n}</span>
               <h3 className="mt-2 text-lg font-bold leading-snug">{c.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">{c.body}</p>
@@ -139,7 +142,7 @@ export default function Home () {
         <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Three layers, and only one of them decides</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           {STEPS.map((s) => (
-            <div key={s.n} className="rounded-xl border border-border bg-panel p-5">
+            <div key={s.n} className="rise rounded-xl border border-border bg-panel p-5">
               <div className="flex items-baseline justify-between">
                 <span className="font-mono text-sm font-semibold text-blue">{s.n}</span>
                 <span className="font-mono text-xs uppercase tracking-wider text-muted">{s.actor}</span>
@@ -169,13 +172,13 @@ export default function Home () {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-green/40 bg-green-bg p-5">
+          <div className="rise rounded-xl border border-green/40 bg-green-bg p-5">
             <div className="text-2xl font-bold tabular-nums text-green">
               {formatAmountShort(t.montoEjecutado, t.decimals)} <span className="text-base font-medium text-muted">USDT</span>
             </div>
             <p className="mt-1 text-sm text-muted">authorised by Cerrojo, simulated on {receipt.run.network}</p>
           </div>
-          <div className="rounded-xl border border-red/40 bg-red-bg p-5">
+          <div className="rise rounded-xl border border-red/40 bg-red-bg p-5">
             <div className="text-2xl font-bold tabular-nums text-red">
               {formatAmountShort(t.montoDenegado, t.decimals)} <span className="text-base font-medium text-muted">USDT</span>
             </div>
@@ -186,13 +189,13 @@ export default function Home () {
         <div className="flex flex-wrap gap-3">
           <Link
             href="/operator"
-            className="rounded-lg bg-blue px-5 py-2.5 font-semibold text-on-blue transition-opacity hover:opacity-90"
+            className="rounded-full bg-gold px-5 py-2.5 font-semibold text-navy shadow-[0_14px_30px_-12px_rgba(233,162,59,0.75)] transition-colors hover:bg-gold-2"
           >
             Open the live demo →
           </Link>
           <Link
             href="/run"
-            className="rounded-lg border border-border bg-panel px-5 py-2.5 font-semibold transition-colors hover:bg-panel-high"
+            className="rounded-full border border-border bg-panel px-5 py-2.5 font-semibold transition-colors hover:bg-panel-high"
           >
             Read the full receipt
           </Link>
@@ -221,14 +224,14 @@ export default function Home () {
 
         <Link
           href="/injection"
-          className="inline-block rounded-lg border border-border bg-panel px-5 py-2.5 font-semibold transition-colors hover:bg-panel-high"
+          className="inline-block rounded-full border border-border bg-panel px-5 py-2.5 font-semibold transition-colors hover:bg-panel-high"
         >
           See the injection test →
         </Link>
       </section>
 
       {/* WDK */}
-      <section className="space-y-6 rounded-xl border border-border bg-panel p-6 sm:p-8">
+      <section className="space-y-6 rounded-2xl border border-border bg-panel p-6 shadow-[0_18px_44px_-22px_rgba(18,41,79,0.28)] sm:p-8">
         <div className="space-y-2">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue">Built on Tether WDK</p>
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -238,7 +241,7 @@ export default function Home () {
 
         <div className="grid gap-4 sm:grid-cols-3">
           {LAYERS.map((l) => (
-            <div key={l.layer} className="rounded-lg border border-border bg-panel-high p-4">
+            <div key={l.layer} className="rise rounded-lg border border-border bg-panel-high p-4">
               <div className="font-mono text-sm font-bold">{l.layer}</div>
               <div className="mt-0.5 text-xs uppercase tracking-wider text-muted">{l.role}</div>
               <p className="mt-2 text-sm leading-relaxed text-muted">{l.body}</p>

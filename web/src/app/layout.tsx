@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
+import { IBM_Plex_Sans, IBM_Plex_Mono, Playfair_Display } from 'next/font/google'
 import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 import './globals.css'
 import { liveApiUrl } from '@/lib/cerrojo'
@@ -16,6 +16,16 @@ const plexMono = IBM_Plex_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
   weight: ['400', '500', '600']
+})
+
+// The headings get a display serif so the argument reads like a page rather
+// than a dashboard. Only headings: the figures and the tables stay on Plex,
+// which is what lines digits up.
+const playfair = Playfair_Display({
+  variable: '--font-display',
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  weight: ['700', '800']
 })
 
 export const metadata: Metadata = {
@@ -56,13 +66,38 @@ export default function RootLayout ({ children }: LayoutProps<'/'>) {
 
   return (
     <ClerkProvider appearance={clerkAppearance}>
-      <html lang="en" className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}>
+      <html lang="en" className={`${plexSans.variable} ${plexMono.variable} ${playfair.variable} h-full antialiased`}>
         <body className="flex min-h-full flex-col">
-          <header className="sticky top-0 z-20 border-b border-border bg-panel/95 backdrop-blur">
+          <div className="atmos" aria-hidden="true">
+            <span className="atmos-blob atmos-a" />
+            <span className="atmos-blob atmos-b" />
+            <span className="atmos-grid" />
+          </div>
+
+          <header className="sticky top-0 z-20 border-b border-border bg-background/80 shadow-[0_18px_40px_-32px_rgba(18,41,79,0.55)] backdrop-blur-xl">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-5 py-3">
-              <Link href="/" className="flex items-baseline gap-3">
-                <span className="text-xl font-bold tracking-tight">Cerrojo</span>
-                <span className="hidden text-sm text-muted sm:inline">The agent proposes. The lock decides.</span>
+              <Link href="/" className="flex items-center gap-3">
+                <span
+                  className="grid size-9 shrink-0 place-items-center rounded-xl border border-gold/60 bg-gold-bg text-navy"
+                  aria-hidden="true"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="size-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="4" y="10.5" width="16" height="10" rx="2.5" />
+                    <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+                  </svg>
+                </span>
+                <span className="flex flex-col leading-tight">
+                  <span className="display text-xl font-bold">Cerrojo</span>
+                  <span className="hidden text-xs text-muted sm:inline">The agent proposes. The lock decides.</span>
+                </span>
               </Link>
 
               <nav className="flex flex-wrap items-center gap-1 text-sm">
@@ -93,7 +128,7 @@ export default function RootLayout ({ children }: LayoutProps<'/'>) {
                     </button>
                   </SignInButton>
                   <SignUpButton mode="modal">
-                    <button className="rounded-lg bg-blue px-3 py-1.5 text-sm font-semibold text-on-blue transition-opacity hover:opacity-90">
+                    <button className="rounded-full bg-gold px-4 py-1.5 text-sm font-semibold text-navy transition-colors hover:bg-gold-2">
                       Sign up
                     </button>
                   </SignUpButton>
@@ -105,9 +140,9 @@ export default function RootLayout ({ children }: LayoutProps<'/'>) {
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-10">{children}</main>
+          <main className="relative z-10 mx-auto w-full max-w-6xl flex-1 px-5 py-10">{children}</main>
 
-          <footer className="border-t border-border bg-panel">
+          <footer className="relative z-10 border-t border-border bg-panel/80 backdrop-blur">
             <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-6 text-sm text-muted">
               <p>Dry-run only. No page here can send funds — no endpoint exists that does.</p>
               <a
