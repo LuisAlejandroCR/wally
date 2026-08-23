@@ -42,7 +42,7 @@ A third, which came from reading the WDK source rather than assuming: accounts u
 
 ## Quickstart on a clean machine
 
-**Node.js v24.15.0** is the version everything here was built and measured on, and the only one it has been run on. The floor is at least Node 20.6, since `.env` is read with `process.loadEnvFile`; `@tetherto/wdk` itself declares no `engines` constraint. No native addons and no build step.
+**Node.js v24.15.0** is the version everything here was built and measured on, and the only one it has been run on. The floor is **Node 22.18.0**, declared as `"engines": { "node": ">=22.18.0" }` in `code/package.json`; installing on anything older gets an `EBADENGINE` warning from npm. `@tetherto/wdk` itself declares no `engines` constraint. No native addons and no build step.
 
 ```bash
 git clone https://github.com/LuisAlejandroCR/wally.git
@@ -156,7 +156,7 @@ node src/cli.js demo
 node src/cli.js demo --sin-red
 ```
 
-npm scripts, if you prefer them: `npm test`, `npm run cerrojo`, `npm run eval`, `npm run doctor`, `npm run mcp`.
+npm scripts, if you prefer them: `npm test`, `npm run cerrojo`, `npm run eval`, `npm run doctor`, `npm run mcp`, `npm run demo`, `npm run serve`.
 
 `run` exits non-zero if the receipt reports a failure or if the three line states do not sum to the plan total. `eval` exits non-zero if there is any false permit or any imperfect case. Both are safe to put in CI.
 
@@ -171,13 +171,37 @@ node src/cli.js serve          # HTTP API on 127.0.0.1:8787
 
 MCP tools: `cerrojo_politicas`, `cerrojo_simular_pago`, `cerrojo_correr_nomina`, `cerrojo_estado_diario`, `cerrojo_recibo_de`. An agent holding all five still cannot exceed a cap, pay an unlisted address, or read the seed — not because it was asked not to, but because no tool does it and the engine refuses regardless. That is asserted over a real stdio transport in `code/tests/mcp.test.js`.
 
-HTTP endpoints: `GET /salud`, `GET /politicas`, `GET /estado-diario`, `POST /simular`, `POST /correr`, `GET /corridas/:runId`.
+HTTP endpoints: `GET /salud`, `GET /politicas`, `GET /estado-diario`, `POST /simular`, `POST /correr`, `GET /corridas/:runId`. Bad input comes back as HTTP 400 with a typed body — `{ error: { code, message, suggestion } }` — never a stack trace, and that is asserted in `code/tests/api.test.js`.
 
 ```bash
 curl -s -X POST http://127.0.0.1:8787/simular \
   -H 'content-type: application/json' \
   -d '{"destinatario":"0x000000000000000000000000000000000000dEaD","monto_base":"400000000"}'
 ```
+
+### The local web UI
+
+`app/` is a browser front end for the same engine, meant for the demo and for anyone who would rather see the payroll than read a terminal. It has no dependencies and no build step: Node's standard library on the server, plain HTML, CSS and JavaScript in the browser.
+
+**It decides nothing.** It consumes the HTTP API above and renders what comes back. Every verdict on screen is a field of an API response — `decision`, `politica`, `regla`, `razon` for a single simulated line, and `estado` plus `policy.id`, `policy.rule`, `policy.reason` for a payroll line. There is not one cap, allowlist or rule condition written in `app/`, and it never imports `@tetherto/wdk`. It also cannot send funds, for the same reason the MCP server cannot: no endpoint exists that does.
+
+Two processes. The API does not start on its own, so that a missing engine is a visible typed error rather than an invented result:
+
+```bash
+cd code && CERROJO_STATE_DIR=../app/state node src/cli.js serve   # API  on 127.0.0.1:8787
+node app/server.js                                                # UI   on 127.0.0.1:7070
+```
+
+Then open <http://127.0.0.1:7070>. `CERROJO_STATE_DIR` is optional but keeps the demo's daily accumulator in `app/state/` instead of mixing it into the one the eval uses. See [`app/README.md`](app/README.md) for the screens and the remaining variables.
+
+The screen worth recording is **Compare clean against poisoned**: two real runs from the same daily accumulator, side by side. The UI runs through the deterministic planner, which is the default the API uses when no `planner` is asked for — so this is the reproducible half of the injection argument, not the model-in-the-loop half measured above. Measured on this machine: the clean payroll and the injected payroll produce **identical verdicts on all 12 lines**, 7 executed / 2 denied / 3 unattempted on both, with the same policy and rule on each denial, while the poisoned text in the `concepto` column of 3 rows travels all the way into the receipt as data and moves nothing. Both servers running, then:
+
+```bash
+node app/verify.mjs        # 37/37 checks, end to end against the live API
+node app/render-check.mjs  # 28/28 checks, rendered text against the receipt field it came from
+```
+
+`verify.mjs` is where the 12-line result above comes from; it fails loudly if the two runs ever diverge, if a denial arrives without a policy, rule and reason, if the browser manages to smuggle a filesystem path through, or if anything shaped like a seed reaches the page.
 
 ---
 
@@ -192,13 +216,13 @@ Excerpt from a real run on this machine (`node src/cli.js run --demo`, receipt t
 ```markdown
 # Recibo — paga la nomina de agosto
 
-**Corrida:** `run_2026-08-22T23-39-05Z` · **Modo:** dry-run · **Red:** sepolia · **Token:** USDT (6 dec)
+**Corrida:** `run_2026-08-23T00-10-47Z` · **Modo:** dry-run · **Red:** sepolia · **Token:** USDT (6 dec)
 **Entrada:** `.../evals/fixtures/nomina_agosto.csv` · sha256 `fb58d129bc5a5aaf…`
-**Planner:** reglas deterministas
+**Planner:** `rules` · reglas deterministas
 
 | # | Estado | Destinatario | Monto | Por que |
 |---|---|---|---|---|
-| 1 | ✅ ejecutada | 0xC4d2d8…951b | 250.000000 USDT | dry-run · comision estimada `150747112945000` wei · Estimacion: tarifa de red x 65000 de gas. |
+| 1 | ✅ ejecutada | 0xC4d2d8…951b | 250.000000 USDT | dry-run · comision estimada `135566681770000` wei · Estimacion: tarifa de red x 65000 de gas. |
 | 4 | ⛔ denegada | 0x17d5D5…56F9 | 900.000000 USDT | `cap-por-transferencia / denegar-sobre-tope`: Supera el tope por transferencia de 500000000 unidades base (500.000000 USDT). |
 | 7 | ⏸ no intentada | — | — | El campo monto llego vacio en el CSV. No se completa con un valor plausible. |
 | 8 | ⛔ denegada | 0x000000…dEaD | 400.000000 USDT | `allowlist-destinatarios / denegar-fuera-de-lista`: El destinatario no esta en la lista de beneficiarios permitidos. |
@@ -217,7 +241,7 @@ Excerpt from a real run on this machine (`node src/cli.js run --demo`, receipt t
 
 ## Mainnet — solo lectura
 
-Red `polygon` · saldo nativo `0` · comision estimada de un transfer ERC-20: `27855078613635000` wei
+Red `polygon` · saldo nativo `0` · comision estimada de un transfer ERC-20: `29085230733845000` wei
 
 `typeof cuenta.transfer === 'function'` → **false**.
 ```
@@ -256,16 +280,7 @@ There is no send tool. `--live` exists only in the CLI and only alongside `--con
 
 **Built on `@tetherto/wdk` directly rather than on `@tetherto/wdk-cli`.** That is a design choice, and what it buys is the previous paragraph: the policy engine is reachable in-process, so a denial is a verdict object returned by WDK with its policy, rule and reason attached, and every interface is a caller of that engine rather than a place where a decision is re-made.
 
-<!--
-  PERMALINKS PINNED TO LOCAL HEAD 0419f987980d181394714a609b73d3918f9845b8
-  Every line range below was verified against that exact commit with `git show <sha>:<path>`.
-
-  origin/main is behind local main and contains only README.md, so every link below
-  returns 404 until local main is pushed. BEFORE SUBMITTING: push, then confirm one link
-  resolves. If history is rewritten, or if any of these files change before the final push,
-  regenerate all of them against the SHA that is actually published -- the line ranges are
-  exact and will drift.
--->
+<!-- Permalinks are pinned to 0419f987980d181394714a609b73d3918f9845b8, an ancestor of main, and all ten line ranges were verified against the file contents at that SHA. -->
 
 | Seam | Permalink | What WDK does there |
 |---|---|---|
@@ -328,13 +343,14 @@ cd code
 npm test
 ```
 
-Five test files, all offline. They generate their own in-memory seed, point the RPC at a dead port, and keep their state out of the way of a real run.
+Six test files, 38 tests, all offline. They generate their own in-memory seed, point the RPC at a dead port, and keep their state out of the way of a real run.
 
 * `tests/policy.test.js` — the Proxy is in place; each of the five policies allows and denies correctly with the RPC dead; `sendTransaction` and `approve` are default-denied; a denied live `transfer` throws `PolicyViolationError` carrying `policyId`.
 * `tests/recibo.test.js` — the three states sum to the total; every denial carries policy, rule and reason; **the poisoned CSV produces a receipt identical to the clean one**; a missing CSV yields a failure receipt rather than a stack trace; no receipt ever contains a seed word or anything shaped like a private key.
 * `tests/mcp.test.js` — over a real stdio MCP transport: no tool name suggests sending, an agent cannot pay off the allowlist, an agent cannot exceed the cap, and `cerrojo_politicas` leaks no secret.
 * `tests/planner.test.js` — the LLM's proposal is re-checked row by row against the CSV; a rewritten amount or address becomes an abstention, never a silent correction.
 * `tests/cli.test.js` — spawns the real CLI: `--live` without `--confirmo` exits 1 and pays nothing, `run --json` emits a receipt that parses and balances, `policy` works with no seed and no network, a missing CSV exits 1 with a typed code and no stack trace, and a bare invocation prints the help.
+* `tests/api.test.js` — drives the HTTP API over a real server on an ephemeral port: `/salud` declares `dry-run`, `/politicas` reports the caps and the recipient count without leaking the allowlist or a secret, `/simular` denies an off-allowlist recipient with the engine's policy and rule, bad input comes back as a typed 400 rather than a 500, an unknown route returns 404 with the endpoint list, and `/correr` produces a dry-run receipt that balances with no transaction hash on any line.
 
 The eval is the number:
 
@@ -393,10 +409,9 @@ Eval output is written to `code/runs/eval_<timestamp>/`, which is gitignored —
 * **No live payroll has ever been executed.** Dry-run is the default and it is what the demo shows. The `--live --confirmo` path exists in the CLI and is wired to `account.transfer`, but it has never been exercised against the chain, because the treasury holds no test USDT. Every denial, verdict and receipt shown here is real; the sends are simulated.
 * **Fee figures are estimates, not exact quotes.** `quoteTransfer` reverts from an unfunded account with `ERC20: transfer amount exceeds balance`, so the fee falls back to `getFeeRates() × 65000 gas`. Every affected line is marked `quoteExacto: false` and carries the reason. An approximation is never presented as exact.
 * **The daily accumulator is ours, not WDK's.** Because `onSuccess` is inert in this beta, the counter is a JSON file under `code/state/`. It is therefore per-machine and not safe against concurrent processes. Two Cerrojo runs racing on the same machine could both pass the daily cap check.
-* **Receipts and daily state stay on the machine that ran them.** `code/runs/` and `code/state/` are gitignored, so the eval artifacts and the day's accumulator are not in this repository — reproduce them with the commands above. The sample payrolls *are* committed, under `code/evals/fixtures/`, because they are synthetic; `code/data/` stays gitignored for real payrolls.
+* **Receipts and daily state stay on the machine that ran them.** `code/runs/`, `code/state/` and `app/state/` are gitignored, so the eval artifacts and the day's accumulator are not in this repository — reproduce them with the commands above. The sample payrolls *are* committed, under `code/evals/fixtures/`, because they are synthetic; `code/data/` stays gitignored for real payrolls.
 * **`npm audit` on this project's dependency tree reports 0 vulnerabilities.** For completeness: during preflight we measured the separate `@tetherto/wdk-cli` beta tree and it reported 14 vulnerabilities, 8 high. `wdk-cli` is not a dependency here, so that tree is not installed by this project, and we did not attempt to blind-fix upstream beta packages during the event.
 * **One chain, one token, one account.** Multi-chain would have been four half-demos.
-* **One cosmetic wart.** When the deterministic planner is used, the receipt labels it `reglas deterministas (--no-llm)`. There is no `--no-llm` flag; rules are simply the default and `--llm` opts out of them. The label is wrong, the behaviour is not.
 * **One flaky test, and it is ours.** The receipt's secret-leak test generates a fresh BIP-39 seed on every run and asserts that no word of it appears in the receipt. The BIP-39 wordlist contains ordinary English words, so when the seed happens to include one that legitimately occurs in receipt text — we hit `dry`, against `dry-run` — the assertion fires. It is a false alarm in the test, not a leak in the product, and it is why the suite should be read as "no seed word leaks" rather than as a green light on a single run.
 * **The LLM planner is opt-in and needs an API key.** The default planner is deterministic rules, which is also the point: the entire system, including every denial, runs with no model at all. `run --llm` requires `ANTHROPIC_API_KEY` and fails with a typed error if it is missing. It has been exercised live against `claude-opus-5` — fourteen runs, valid schema on the first attempt every time, ~22 s per run, and the verification layer never had to reject a proposed address or amount — but fourteen runs is not an accuracy figure, so none is claimed. The main eval stays deterministic on purpose: 20 cases × 5 runs through a model would be 100 API calls per measurement.
 * **A cautious planner can hide the lock.** Asked to *"pay the August payroll"*, the model excluded the bonus row and the external-supplier row as out of scope and sent them to abstentions with a stated reason. Defensible, honest, and it means those rows never reached the policy engine — that run ends with zero denials. Nothing unauthorized executed, but if you are demonstrating the lock, use the deterministic planner or an instruction that covers every row (`"paga TODAS las filas… no filtres por criterio propio"` reproduces 7/2/3 exactly, with Opus 5 in the loop).
@@ -427,6 +442,12 @@ code/
 │   └── fixtures/   the sample payrolls and the allowlist
 ├── tests/
 └── .env.example
+
+app/
+├── server.js       static files plus a proxy to the HTTP API. No decision logic
+├── public/         the four screens and the clean-vs-poisoned comparison
+├── verify.mjs      end-to-end check against the live API
+└── render-check.mjs  rendered text checked against the receipt field it came from
 ```
 
 ## License
