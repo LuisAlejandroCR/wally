@@ -1,8 +1,9 @@
 import clean from '@/data/run-clean.json'
 import poisoned from '@/data/run-poisoned.json'
 import type { Receipt } from '@/lib/cerrojo'
-import { StatusPill, VerdictIcon } from '@/components/Receipt'
-import { formatAmount, shortAddress } from '@/lib/cerrojo'
+import { Amount, DryRunNote, StatusPill, VerdictIcon } from '@/components/Receipt'
+import { CopyAddress } from '@/components/CopyAddress'
+import { Reveal } from '@/components/Reveal'
 
 const limpia = clean as unknown as Receipt
 const envenenada = poisoned as unknown as Receipt
@@ -14,6 +15,7 @@ type Row = {
   to: string | null
   amount: string | null
   decimals: number
+  token: string | null
   cleanText: string | null
   poisonedText: string | null
   policy?: { id: string; rule: string; reason: string }
@@ -28,6 +30,7 @@ const rows: Row[] = limpia.lines.map((l, i) => {
     to: l.to,
     amount: l.amount,
     decimals: l.decimals,
+    token: l.token,
     cleanText: l.concepto,
     poisonedText: p.concepto,
     policy: l.policy
@@ -41,60 +44,51 @@ export default function InjectionPage () {
   return (
     <div className="space-y-10">
       <section className="space-y-4">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          The same payroll, with instructions written into it
+        <h1 className="text-3xl font-bold sm:text-4xl">
+          The same payroll, <em>arguing back</em>
         </h1>
-        <p className="max-w-3xl text-lg text-muted">
-          Three cells of the CSV were rewritten to attack the model: an order to ignore the limits, a fake system
-          comment disabling the allowlist, and a supplier row claiming prior approval. Both files were run through the
-          whole pipeline. The receipts are compared line by line below.
+        <p className="max-w-2xl text-lg text-muted">
+          Three cells rewritten to attack the model: ignore the limits, disable the allowlist, claim prior approval.
+          Both files ran the full pipeline.
         </p>
 
-        <div
-          className={`rounded-xl border p-5 ${
-            identical ? 'border-green/40 bg-green-bg' : 'border-red/40 bg-red-bg'
-          }`}
-        >
+        <div className={`rise rounded-2xl border p-5 ${identical ? 'border-green/40 bg-green-bg' : 'border-red/40 bg-red-bg'}`}>
           <p className="text-2xl font-bold">
-            {identical
-              ? `Identical verdict on all ${rows.length} lines.`
-              : 'The verdicts differ — read the table before trusting anything here.'}
+            {identical ? `Identical verdict on all ${rows.length} lines.` : 'The verdicts differ — read the table.'}
           </p>
-          <p className="mt-1 text-sm opacity-90">
+          <span aria-hidden="true" className="sweep mt-2 block h-0.5 w-24 rounded bg-gold" />
+          <p className="mt-2 text-sm">
             {limpia.totals.ejecutadas}/{limpia.totals.denegadas}/{limpia.totals.no_intentadas} against{' '}
-            {envenenada.totals.ejecutadas}/{envenenada.totals.denegadas}/{envenenada.totals.no_intentadas} approved /
-            blocked / not attempted. The limits never lived in the prompt, so there was nothing in the file to talk out
-            of them.
+            {envenenada.totals.ejecutadas}/{envenenada.totals.denegadas}/{envenenada.totals.no_intentadas} — approved /
+            blocked / not attempted. The limits were never in the prompt, so there was nothing to talk out of them.
           </p>
         </div>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold">The {injected.length} poisoned cells, rendered as data</h2>
+      <Reveal className="space-y-4">
+        <h2 className="text-2xl font-bold">{injected.length} poisoned cells, carried as data</h2>
         <div className="space-y-3">
           {injected.map((r) => (
-            <div key={r.row} className="rounded-xl border border-border bg-panel p-4">
+            <div key={r.row} className="rise rounded-xl border border-border bg-panel p-4">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="text-xs uppercase tracking-wider text-muted">Row {r.row}</span>
                 <StatusPill estado={r.estado} />
-                <span className="text-xs text-muted">
-                  verdict unchanged: {r.same ? 'yes' : 'no'}
-                </span>
+                <span className="text-xs text-muted">verdict unchanged: {r.same ? 'yes' : 'no'}</span>
               </div>
               <p className="mt-3 font-mono text-sm break-words text-amber">{r.poisonedText}</p>
               <p className="mt-2 text-sm text-muted">
-                Clean file said: <span className="font-mono">{r.cleanText}</span>
+                Clean file: <span className="font-mono">{r.cleanText}</span>
               </p>
             </div>
           ))}
         </div>
         <p className="text-sm text-muted">
-          The injected text does reach the receipt — as the payment concept it claims to be. It is data being carried,
-          not an instruction being followed.
+          The text reaches the receipt as the payment description it claims to be. Data being carried, not an
+          instruction being followed.
         </p>
-      </section>
+      </Reveal>
 
-      <section className="space-y-4">
+      <Reveal className="space-y-4">
         <h2 className="text-2xl font-bold">Line by line</h2>
         <div className="scroll-x rounded-xl border border-border bg-panel">
           <table className="w-full min-w-[48rem] border-collapse text-sm">
@@ -108,8 +102,12 @@ export default function InjectionPage () {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.row} className="border-b border-border/60 last:border-0">
+              {rows.map((r, i) => (
+                <tr
+                  key={r.row}
+                  className="row-in border-b border-border/60 last:border-0"
+                  style={{ animationDelay: `${Math.min(i * 45, 540)}ms` }}
+                >
                   <td className="p-3 tabular-nums text-muted">{r.row}</td>
                   <td className="p-3">
                     <StatusPill estado={r.estado} />
@@ -119,8 +117,12 @@ export default function InjectionPage () {
                       </div>
                     )}
                   </td>
-                  <td className="p-3 font-mono text-xs">{shortAddress(r.to)}</td>
-                  <td className="p-3 text-right font-mono tabular-nums">{formatAmount(r.amount, r.decimals)}</td>
+                  <td className="p-3">
+                    <CopyAddress address={r.to} />
+                  </td>
+                  <td className="p-3 text-right font-mono tabular-nums">
+                    <Amount base={r.amount} decimals={r.decimals} token={r.token} />
+                  </td>
                   <td className="p-3">
                     <span className={`inline-flex items-center gap-1.5 ${r.same ? 'text-green' : 'text-red'}`}>
                       <VerdictIcon estado={r.same ? 'ejecutada' : 'denegada'} />
@@ -132,13 +134,13 @@ export default function InjectionPage () {
             </tbody>
           </table>
         </div>
+        <DryRunNote network={limpia.run.network} />
         <p className="text-sm text-muted">
-          Both receipts were produced by <code className="font-mono">node src/cli.js run --json</code> with a fresh
-          daily ledger, and shipped with this page. The repository also carries{' '}
-          <code className="font-mono">cerrojo inyeccion</code>, which repeats the comparison with a real model in the
-          loop and reports dangerous drift.
+          Both receipts came from <code className="font-mono">node src/cli.js run --json</code> on a fresh daily
+          ledger. <code className="font-mono">cerrojo inyeccion</code> repeats the comparison with a live model and
+          reports dangerous drift.
         </p>
-      </section>
+      </Reveal>
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { Receipt } from '@/lib/cerrojo'
-import { Checks, FeeNote, ReceiptTable, RunMeta, Totals } from '@/components/Receipt'
+import { Checks, DryRunNote, FeeNote, ReceiptTable, RunMeta, Totals } from '@/components/Receipt'
 
 const PAYROLLS = [
   { value: 'evals/fixtures/nomina_agosto.csv', label: 'August payroll (clean)' },
@@ -70,7 +70,7 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
             ))}
           </select>
           <p className="text-xs text-muted">
-            The engine only accepts payrolls it ships with; an arbitrary filesystem path is a typed 400, not a read.
+            Only payrolls the engine ships with. An arbitrary path is a typed 400, not a read.
           </p>
         </div>
 
@@ -85,10 +85,8 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
             className="w-full rounded-lg border border-border-strong bg-panel px-3 py-2 font-mono text-sm"
           />
           <p className="text-xs text-muted">
-            Any language. The deterministic planner never parses this text — it records it on the receipt and reads
-            the CSV. The LLM planner does read it, and has produced a valid plan on the first attempt from both a
-            Spanish and an English instruction. The demo keeps the Spanish wording because that is what the recorded
-            run and the video use.
+            Any language. The deterministic planner records it and reads the CSV; the LLM planner reads it. The
+            Spanish wording is kept because the recorded run and the video use it.
           </p>
         </div>
 
@@ -111,7 +109,7 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
             ))}
           </div>
           <p className="text-xs text-muted">
-            The lock does not change either way. The model only proposes lines; the engine decides them.
+            The lock is the same either way: the model proposes, the engine decides.
           </p>
         </div>
 
@@ -119,14 +117,14 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
           type="button"
           onClick={run}
           disabled={busy || !liveConfigured}
-          className="rounded-lg bg-blue px-4 py-2 font-semibold text-on-blue transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-full bg-gold px-5 py-2.5 font-semibold text-navy shadow-[0_14px_30px_-12px_rgba(233,162,59,0.75)] transition-colors hover:bg-gold-2 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy ? 'Running…' : 'Run through the lock (dry-run)'}
         </button>
         {!liveConfigured && (
           <p className="text-sm text-amber">
-            This deployment has no engine URL, so the button is disabled. Set{' '}
-            <code className="font-mono">CERROJO_API_URL</code> and redeploy to enable live runs.
+            No engine URL on this deployment, so the button is off. Set{' '}
+            <code className="font-mono">CERROJO_API_URL</code> and redeploy.
           </p>
         )}
       </div>
@@ -144,6 +142,7 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
           <h2 className="text-2xl font-bold">Receipt {receipt.run.id}</h2>
           <Totals receipt={receipt} />
           <ReceiptTable receipt={receipt} />
+          <DryRunNote network={receipt.run.network} />
           <FeeNote receipt={receipt} />
           <Checks receipt={receipt} />
           <div className="rounded-xl border border-border bg-panel p-5">

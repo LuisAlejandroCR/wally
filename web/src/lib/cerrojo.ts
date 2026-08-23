@@ -90,9 +90,41 @@ export function formatAmountShort (base: string | null, decimals: number, minFra
   return kept.length > 0 ? `${whole}.${kept}` : whole
 }
 
+/**
+ * The same amount at two decimals, which is how a person reads money.
+ *
+ * Truncated, never rounded: a figure on screen can be shorter than the receipt,
+ * never larger than what the engine authorised. The exact value stays one hover
+ * away — every caller passes the full string as a title.
+ */
+export function formatAmount2 (base: string | null, decimals: number): string {
+  const full = formatAmount(base, decimals)
+  if (full === '—') return full
+  if (!full.includes('.')) return `${full}.00`
+  const [whole, frac] = full.split('.')
+  return `${whole}.${`${frac}00`.slice(0, 2)}`
+}
+
 export function shortAddress (address: string | null): string {
   if (!address) return '—'
   return address.length <= 14 ? address : `${address.slice(0, 8)}…${address.slice(-6)}`
+}
+
+/**
+ * Block explorer for the network the receipt says it ran on. Unknown network,
+ * no link: a wrong explorer is worse than none, because it renders an address
+ * that never existed there.
+ */
+const EXPLORER: Record<string, string> = {
+  sepolia: 'https://sepolia.etherscan.io',
+  mainnet: 'https://etherscan.io',
+  polygon: 'https://polygonscan.com'
+}
+
+export function explorerAddressUrl (address: string | null, network: string): string | null {
+  const base = EXPLORER[network]
+  if (!base || !address) return null
+  return `${base}/address/${address}`
 }
 
 export const ESTADO_LABEL: Record<Estado, string> = {

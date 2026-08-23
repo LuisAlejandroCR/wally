@@ -1,6 +1,36 @@
 import type { Receipt, ReceiptLine } from '@/lib/cerrojo'
-import { formatAmount, shortAddress, statusLabel } from '@/lib/cerrojo'
+import { explorerAddressUrl, formatAmount, formatAmount2, shortAddress, statusLabel } from '@/lib/cerrojo'
+import { CopyAddress } from '@/components/CopyAddress'
 import { checkDetailEn, checkLabelEn, quoteNoteEn, reasonEn, ruleNameEn, whyEn } from '@/lib/english'
+
+/**
+ * Why the recipients are not links.
+ *
+ * Nothing was broadcast and the payroll rows are invented, so no explorer has
+ * an entry for any of them. Linking to an empty page would look like a broken
+ * demo; the addresses copy instead. The one real object here is the token
+ * contract, linked in the run metadata.
+ */
+export function DryRunNote ({ network }: { network: string }) {
+  return (
+    <p className="text-sm text-muted">
+      <span className="text-foreground">Dry run.</span> Nothing was broadcast on {network}, and the payroll rows are
+      synthetic addresses, so none of them exists on a block explorer — click one to copy it instead. The token
+      contract below is the real deployment.
+    </p>
+  )
+}
+
+/** Two decimals on screen, the exact figure on hover. */
+export function Amount ({ base, decimals, token }: { base: string | null; decimals: number; token?: string | null }) {
+  if (base === null) return <span className="text-muted">—</span>
+  return (
+    <span title={`${formatAmount(base, decimals)} ${token ?? ''}`.trim()}>
+      {formatAmount2(base, decimals)}
+      {token ? <span className="ml-1 text-xs text-muted">{token}</span> : null}
+    </span>
+  )
+}
 
 const PILL: Record<string, string> = {
   ejecutada: 'bg-green-bg text-green border-green/40',
@@ -63,28 +93,32 @@ export function Totals ({ receipt }: { receipt: Receipt }) {
   const t = receipt.totals
   const cells = [
     { label: 'Approved', value: t.ejecutadas, tone: 'text-green' },
-    { label: 'Blocked by policy', value: t.denegadas, tone: 'text-red' },
+    { label: 'Blocked', value: t.denegadas, tone: 'text-red' },
     { label: 'Not attempted', value: t.no_intentadas, tone: 'text-amber' },
-    { label: 'Lines in the payroll', value: t.lineas, tone: 'text-foreground' }
+    { label: 'Lines', value: t.lineas, tone: 'text-foreground' }
   ]
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {cells.map((c) => (
-        <div key={c.label} className="rounded-xl border border-border bg-panel p-4">
+      {cells.map((c, i) => (
+        <div
+          key={c.label}
+          className="count-in rise rounded-xl border border-border bg-panel p-4"
+          style={{ animationDelay: `${i * 90}ms` }}
+        >
           <div className={`text-3xl font-bold tabular-nums ${c.tone}`}>{c.value}</div>
           <div className="mt-1 text-xs uppercase tracking-wider text-muted">{c.label}</div>
         </div>
       ))}
-      <div className="col-span-2 rounded-xl border border-border bg-panel p-4 sm:col-span-2">
+      <div className="col-span-2 rise rounded-xl border border-green/40 bg-green-bg p-4">
         <div className="text-2xl font-bold tabular-nums text-green">
-          {formatAmount(t.montoEjecutado, t.decimals)} <span className="text-base font-medium text-muted">USDT</span>
+          <Amount base={t.montoEjecutado} decimals={t.decimals} /> <span className="text-base font-medium text-muted">USDT</span>
         </div>
-        <div className="mt-1 text-xs uppercase tracking-wider text-muted">Authorised (simulated)</div>
+        <div className="mt-1 text-xs uppercase tracking-wider text-muted">Authorised · simulated</div>
       </div>
-      <div className="col-span-2 rounded-xl border border-border bg-panel p-4 sm:col-span-2">
+      <div className="col-span-2 rise rounded-xl border border-red/40 bg-red-bg p-4">
         <div className="text-2xl font-bold tabular-nums text-red">
-          {formatAmount(t.montoDenegado, t.decimals)} <span className="text-base font-medium text-muted">USDT</span>
+          <Amount base={t.montoDenegado} decimals={t.decimals} /> <span className="text-base font-medium text-muted">USDT</span>
         </div>
         <div className="mt-1 text-xs uppercase tracking-wider text-muted">Stopped by the lock</div>
       </div>
@@ -100,7 +134,7 @@ export function Totals ({ receipt }: { receipt: Receipt }) {
 function Verbatim ({ text }: { text: string }) {
   return (
     <span className="mt-1 block text-xs text-muted">
-      <span className="uppercase tracking-wider">engine, verbatim:</span> <span lang="es">{text}</span>
+      <span className="uppercase tracking-wider">verbatim:</span> <span lang="es">{text}</span>
     </span>
   )
 }
@@ -121,8 +155,8 @@ function Why ({ line }: { line: ReceiptLine }) {
   if (line.estado === 'ejecutada') {
     return (
       <div className="text-muted">
-        dry-run · estimated fee <span className="font-mono text-xs">{line.feeEstimada ?? '—'}</span> wei{' '}
-        {line.quoteExacto === false && <span className="text-amber">— an estimate, not an exact quote</span>}
+        dry-run · fee <span className="font-mono text-xs">{line.feeEstimada ?? '—'}</span> wei{' '}
+        {line.quoteExacto === false && <span className="text-amber">(estimate)</span>}
       </div>
     )
   }
@@ -146,25 +180,26 @@ export function ReceiptTable ({ receipt }: { receipt: Receipt }) {
             <th className="p-3 font-semibold">Verdict</th>
             <th className="p-3 font-semibold">Recipient</th>
             <th className="p-3 text-right font-semibold">Amount</th>
-            <th className="p-3 font-semibold">Why — as the policy engine reported it</th>
+            <th className="p-3 font-semibold">Why — the engine&apos;s own words</th>
           </tr>
         </thead>
         <tbody>
-          {receipt.lines.map((line) => (
-            <tr key={line.row} className="border-b border-border/60 last:border-0 align-top">
+          {receipt.lines.map((line, i) => (
+            <tr
+              key={line.row}
+              className="row-in border-b border-border/60 last:border-0 align-top"
+              style={{ animationDelay: `${Math.min(i * 45, 540)}ms` }}
+            >
               <td className="p-3 tabular-nums text-muted">{line.row}</td>
               <td className="p-3">
                 <StatusPill estado={line.estado} txHash={line.txHash ?? null} />
               </td>
               <td className="p-3">
-                <span className="font-mono text-xs" title={line.to ?? undefined}>
-                  {shortAddress(line.to)}
-                </span>
+                <CopyAddress address={line.to} />
               </td>
               <td className="p-3 text-right font-mono tabular-nums">
-                {formatAmount(line.amount, line.decimals)}
                 {/* A line with no amount carries no currency either: the CSV never said one. */}
-                {line.amount !== null && <span className="ml-1 text-xs text-muted">{line.token ?? ''}</span>}
+                <Amount base={line.amount} decimals={line.decimals} token={line.token} />
               </td>
               <td className="p-3">
                 <Why line={line} />
@@ -184,7 +219,8 @@ export function FeeNote ({ receipt }: { receipt: Receipt }) {
   const english = quoteNoteEn(line.quoteNota)
   return (
     <p className="text-sm text-muted">
-      <span className="text-amber">Fees are estimates.</span> {english ?? line.quoteNota}
+      <span className="text-amber">Fees are estimates.</span> {english ?? line.quoteNota} Amounts show two decimals;
+      hover for the exact figure.
     </p>
   )
 }
@@ -210,6 +246,7 @@ export function Checks ({ receipt }: { receipt: Receipt }) {
 
 export function RunMeta ({ receipt, source }: { receipt: Receipt; source: string }) {
   const r = receipt.run
+  const tokenUrl = explorerAddressUrl(r.token.address, r.network)
   const items = [
     ['Run', r.id],
     ['Mode', r.mode],
@@ -229,6 +266,26 @@ export function RunMeta ({ receipt, source }: { receipt: Receipt; source: string
           <dd className="font-mono text-xs break-all">{v}</dd>
         </div>
       ))}
+      {/* The one address on this page with a populated explorer page: the token
+          contract is real and deployed, which the empty recipient pages are not. */}
+      <div>
+        <dt className="text-xs uppercase tracking-wider text-muted">Token contract</dt>
+        <dd className="font-mono text-xs break-all">
+          {tokenUrl ? (
+            <a
+              href={tokenUrl}
+              target="_blank"
+              rel="noreferrer"
+              title={`${r.token.address} on ${r.network}`}
+              className="text-blue underline decoration-dotted underline-offset-4 hover:decoration-solid"
+            >
+              {shortAddress(r.token.address)} ↗
+            </a>
+          ) : (
+            shortAddress(r.token.address)
+          )}
+        </dd>
+      </div>
     </dl>
   )
 }

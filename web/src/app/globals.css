@@ -86,11 +86,26 @@ h2,
   color: var(--navy);
 }
 
+/* Emphasis runs burnt gold, not bright gold. Measured on the cream page:
+   #b45309 is 4.66:1, #8a4d0b 6.19:1, #7c4a02 6.87:1 — every stop passes AA for
+   text. The bright #e9a23b is 2.0:1 and stays where it belongs, on fills. */
 h1 em,
 h2 em,
 .display em {
   font-style: italic;
-  background: linear-gradient(118deg, var(--gold) 0%, #d97706 58%, #b45309 100%);
+  background: linear-gradient(118deg, #b45309 0%, #8a4d0b 55%, #7c4a02 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* A clipped background paints the element it is set on, so an inline-block word
+   inside the emphasis would inherit `color: transparent` with nothing behind it
+   and disappear. Each word therefore carries the gradient itself. */
+h1 em .word,
+h2 em .word,
+.display em .word {
+  background: linear-gradient(118deg, #b45309 0%, #8a4d0b 55%, #7c4a02 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -136,6 +151,311 @@ h2 em,
   background-size: 28px 28px;
   mask-image: radial-gradient(76% 46% at 50% 10%, #000 24%, transparent 78%);
   -webkit-mask-image: radial-gradient(76% 46% at 50% 10%, #000 24%, transparent 78%);
+}
+
+/* Scroll reveal. The class is only ever added by <Reveal>, which runs on the
+   client, so nothing here can hide content from a reader without JavaScript. */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+.reveal.in {
+  opacity: 1;
+  transform: none;
+  transition: opacity .75s var(--ease-out), transform .75s var(--ease-out);
+}
+
+/* The headline arrives a word at a time. Delays are set inline, per word. */
+@keyframes word-in {
+  from { opacity: 0; filter: blur(10px); transform: translateY(22px); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+
+.word {
+  display: inline-block;
+  opacity: 0;
+  animation: word-in .9s var(--ease-out) forwards;
+}
+
+/* A table that fills in row by row reads as a machine working through a list. */
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.row-in {
+  animation: row-in .5s var(--ease-out) both;
+}
+
+/* The gold rule under a verdict sweeps once, then stays. */
+@keyframes sweep {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.sweep {
+  transform-origin: left;
+  animation: sweep .8s var(--ease-out) .25s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .word,
+  .row-in,
+  .sweep {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* ── The explainer ────────────────────────────────────────────────────────
+   Five acts on one 24s timeline (1% = 240ms). Every act is stacked in the same
+   box and fades through its own window while drifting and pushing in, which is
+   the cheapest camera move there is. Nothing here is a video: it is SVG and
+   keyframes, so it costs one request and cannot buffer.
+
+   Act windows:  1 → 1-20%   2 → 20-39%   3 → 39-61%   4 → 61-80%   5 → 80-100% */
+
+.exp-wrap { margin: 0; }
+
+.exp {
+  position: relative;
+  overflow: hidden;
+  height: 340px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background:
+    radial-gradient(120% 90% at 82% 0%, var(--gold-bg) 0%, transparent 52%),
+    radial-gradient(90% 70% at 10% 100%, rgba(31, 122, 76, .07) 0%, transparent 60%),
+    var(--panel);
+  box-shadow: var(--shadow-soft);
+}
+
+/* A vignette gives the box a lens rather than a border. */
+.exp::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 22px;
+  box-shadow: inset 0 0 70px -30px rgba(18, 41, 79, .35);
+}
+
+.exp-paused * { animation-play-state: paused !important; }
+
+.exp-act {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 24px 40px;
+  opacity: 0;
+}
+
+.exp-art { width: min(330px, 78%); height: auto; }
+.exp-bounce-art { width: min(300px, 72%); height: auto; }
+
+.exp-cap {
+  max-width: 48ch;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.exp-cap strong { color: var(--navy); font-weight: 700; }
+
+/* Each act fades up, holds, and pushes in a little before it leaves. */
+@keyframes act1 { 0%,1%{opacity:0;transform:translateY(16px) scale(.97)} 4%,16%{opacity:1;transform:translateY(0) scale(1)} 19%{opacity:0;transform:translateY(-8px) scale(1.03)} 100%{opacity:0} }
+@keyframes act2 { 0%,19%{opacity:0;transform:translateY(16px) scale(.97)} 23%,35%{opacity:1;transform:translateY(0) scale(1)} 38%{opacity:0;transform:translateY(-8px) scale(1.03)} 100%{opacity:0} }
+@keyframes act3 { 0%,38%{opacity:0;transform:translateY(16px) scale(.97)} 42%,57%{opacity:1;transform:translateY(0) scale(1)} 60%{opacity:0;transform:translateY(-8px) scale(1.03)} 100%{opacity:0} }
+@keyframes act4 { 0%,60%{opacity:0;transform:translateY(16px) scale(.97)} 64%,76%{opacity:1;transform:translateY(0) scale(1)} 79%{opacity:0;transform:translateY(-8px) scale(1.03)} 100%{opacity:0} }
+@keyframes act5 { 0%,79%{opacity:0;transform:translateY(16px) scale(.97)} 83%,97%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:scale(1.03)} }
+
+.exp-a1 { animation: act1 24s linear infinite; }
+.exp-a2 { animation: act2 24s linear infinite; }
+.exp-a3 { animation: act3 24s linear infinite; }
+.exp-a4 { animation: act4 24s linear infinite; }
+.exp-a5 { animation: act5 24s linear infinite; }
+
+/* Drawing tokens: navy line work, gold for anything the lock owns. */
+.exp-shadow { fill: rgba(18, 41, 79, .1); }
+.exp-paper { fill: #fff; stroke: var(--border-strong); stroke-width: 1.5; }
+.exp-paper-head { fill: var(--panel-high); }
+.exp-dot-gold { fill: var(--gold); }
+.exp-dot-soft { fill: rgba(18, 41, 79, .2); }
+.exp-ink { fill: rgba(18, 41, 79, .5); }
+.exp-ink-soft { fill: rgba(18, 41, 79, .2); }
+.exp-ink-gold { fill: rgba(233, 162, 59, .8); }
+.exp-stroke { stroke: var(--navy); stroke-width: 3; stroke-linecap: round; }
+.exp-gold-fill { fill: var(--gold); }
+.exp-bot { fill: var(--navy); }
+.exp-visor { fill: #16305c; }
+.exp-eye { fill: var(--gold); }
+.exp-mouth { fill: rgba(255, 255, 255, .5); }
+.exp-lock-body { fill: var(--navy); }
+.exp-shackle { stroke: var(--navy); stroke-width: 9; stroke-linecap: round; }
+.exp-keyhole { fill: var(--gold); }
+.exp-ping-ring { fill: none; stroke: var(--gold); stroke-width: 2; }
+.exp-rule-text { fill: var(--navy); font-size: 9.5px; font-weight: 700; }
+.exp-poison-box { fill: var(--red-bg); stroke: var(--red); stroke-width: 1.5; }
+.exp-poison-text { fill: var(--red); font-size: 9px; font-weight: 800; letter-spacing: .04em; text-anchor: middle; }
+.exp-bang-ring { fill: var(--red); }
+.exp-bang-text { fill: #fff; font-size: 15px; font-weight: 800; text-anchor: middle; }
+.exp-note-box { fill: #fff; stroke: var(--border-strong); stroke-width: 1.5; }
+.exp-note-mark { fill: var(--gold-bg); stroke: var(--gold); stroke-width: 1.5; }
+.exp-note-text { fill: var(--navy); font-size: 12px; font-weight: 700; text-anchor: middle; }
+.exp-nokey-ring { fill: #fff; stroke: var(--border-strong); stroke-width: 1.5; }
+.exp-nokey-key { stroke: var(--muted); stroke-width: 2; }
+.exp-nokey-slash { stroke: var(--red); stroke-width: 2.5; stroke-linecap: round; }
+.exp-belt { fill: var(--panel-high); }
+.exp-belt-tick { fill: rgba(18, 41, 79, .25); }
+.exp-seal-ring { fill: var(--green-bg); stroke: var(--green); stroke-width: 2; }
+.exp-seal-tick { stroke: var(--green); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.exp-printer { fill: var(--navy); }
+.exp-printer-slot { fill: rgba(255, 255, 255, .4); }
+.exp-sum { fill: var(--navy); font-size: 13px; font-weight: 800; text-anchor: middle; font-variant-numeric: tabular-nums; }
+
+/* ── act 1 · paper flutters in, rows land, the poisoned cell shoves through */
+@keyframes flutter { 0%,1%{transform:translateY(26px) rotate(-3deg)} 5%{transform:translateY(0) rotate(1.2deg)} 8%{transform:rotate(-.6deg)} 12%{transform:rotate(.4deg)} 16%{transform:rotate(0)} 100%{transform:rotate(0)} }
+.exp-flutter { animation: flutter 24s linear infinite; transform-origin: 130px 80px; }
+
+@keyframes row-land { 0%,2%{opacity:0;transform:translateX(-14px)} 7%,17%{opacity:1;transform:none} 19%,100%{opacity:0} }
+.exp-row { animation: row-land 24s linear infinite; }
+
+@keyframes poison-in { 0%,9%{opacity:0;transform:scale(.85)} 11%{opacity:1;transform:scale(1.06)} 12.5%{transform:scale(.98)} 14%,17%{transform:scale(1)} 19%,100%{opacity:0} }
+.exp-poison { animation: poison-in 24s linear infinite; transform-origin: 130px 122px; }
+
+@keyframes bang-in { 0%,11%{opacity:0;transform:scale(.4) rotate(-20deg)} 13%{opacity:1;transform:scale(1.15) rotate(6deg)} 15%,17%{transform:scale(1) rotate(0)} 19%,100%{opacity:0} }
+.exp-bang { animation: bang-in 24s linear infinite; transform-origin: 206px 112px; }
+
+/* ── act 2 · the agent idles, blinks, and hands over a proposal */
+@keyframes bob { 0%,20%{transform:translateY(0)} 26%{transform:translateY(-5px)} 32%{transform:translateY(0)} 37%{transform:translateY(-3px)} 39%,100%{transform:translateY(0)} }
+.exp-bob { animation: bob 24s ease-in-out infinite; }
+
+@keyframes antenna { 0%,21%{transform:rotate(0)} 24%{transform:rotate(9deg)} 27%{transform:rotate(-7deg)} 30%{transform:rotate(4deg)} 33%,100%{transform:rotate(0)} }
+.exp-antenna { animation: antenna 24s ease-in-out infinite; transform-origin: 130px 34px; }
+
+@keyframes blink { 0%,25.6%{transform:scaleY(1)} 26%{transform:scaleY(.1)} 26.5%,33.4%{transform:scaleY(1)} 33.8%{transform:scaleY(.1)} 34.2%,100%{transform:scaleY(1)} }
+.exp-blink { animation: blink 24s linear infinite; transform-origin: 130px 67px; }
+
+@keyframes nokey-in { 0%,23%{opacity:0;transform:scale(.6)} 26%{opacity:1;transform:scale(1.1)} 28%,36%{transform:scale(1)} 38%,100%{opacity:0} }
+.exp-nokey { animation: nokey-in 24s linear infinite; transform-origin: 212px 42px; }
+
+@keyframes note-in { 0%,28%{opacity:0;transform:translateY(-14px) scale(.9)} 31%{opacity:1;transform:translateY(0) scale(1.06)} 32.5%{transform:scale(.97)} 34%,36%{transform:scale(1)} 38%,100%{opacity:0} }
+.exp-note { animation: note-in 24s linear infinite; transform-origin: 130px 129px; }
+
+/* ── act 3 · the belt runs, chips reach the gate, the refused ones bounce */
+@keyframes belt-run { 0%,40%{transform:translateX(0);opacity:0} 41%{opacity:1} 56%{transform:translateX(24px);opacity:1} 58%,100%{opacity:0} }
+.exp-belt-tick { animation: belt-run 2.4s linear infinite; }
+
+/* Approved chips ride through the gate; blocked ones hit it and come back;
+   the not-attempted ones stop short of it, which is what abstaining looks like. */
+@keyframes chip-ok { 0%,41%{opacity:0;transform:translateX(0)} 43%{opacity:1} 53%{opacity:1;transform:translateX(250px)} 55%,100%{opacity:0;transform:translateX(250px)} }
+@keyframes chip-no { 0%,41%{opacity:0;transform:translateX(0)} 43%{opacity:1} 50%{transform:translateX(190px)} 52%{transform:translateX(150px) translateY(-16px) rotate(-18deg)} 55%{transform:translateX(120px) translateY(30px) rotate(-40deg);opacity:0} 100%{opacity:0} }
+@keyframes chip-wait { 0%,41%{opacity:0;transform:translateX(0)} 43%{opacity:1} 51%,56%{transform:translateX(140px)} 58%,100%{opacity:0;transform:translateX(140px)} }
+
+.exp-chip { animation-duration: 24s; animation-timing-function: linear; animation-iteration-count: infinite; }
+.exp-chip-ok { fill: var(--green); animation-name: chip-ok; }
+.exp-chip-no { fill: var(--red); animation-name: chip-no; }
+.exp-chip-wait { fill: var(--amber); animation-name: chip-wait; }
+
+@keyframes gate-knock { 0%,49%{transform:translateX(0)} 50.5%{transform:translateX(3px)} 52%{transform:translateX(-2px)} 53.5%,100%{transform:translateX(0)} }
+.exp-gate { animation: gate-knock 24s linear infinite; }
+
+@keyframes ping { 0%,49%{opacity:0;transform:scale(.5)} 51%{opacity:.85} 57%,100%{opacity:0;transform:scale(1.5)} }
+.exp-ping { animation: ping 24s linear infinite; transform-origin: 215px 84px; }
+
+@keyframes rule-in { 0%{opacity:0;transform:translateX(-8px)} 100%{opacity:1;transform:none} }
+.exp-rule { opacity: 0; animation: rule-in .45s var(--ease-out) forwards; }
+
+/* ── act 4 · stamps land, the attacker is deflected */
+.exp-tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+
+.exp-stamp {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 112px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1.5px solid;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  opacity: 0;
+  animation: stamp-in 24s linear infinite;
+}
+.exp-stamp b { font-family: var(--font-display), Georgia, serif; font-size: 2.4rem; line-height: 1; letter-spacing: -.03em; }
+.exp-ok { border-color: rgba(31, 122, 76, .45); background: var(--green-bg); color: var(--green); }
+.exp-no { border-color: rgba(179, 38, 30, .45); background: var(--red-bg); color: var(--red); animation-delay: .3s; }
+.exp-wait { border-color: rgba(138, 90, 0, .4); background: var(--amber-bg); color: var(--amber); animation-delay: .6s; }
+
+@keyframes stamp-in { 0%,62%{opacity:0;transform:scale(.75) rotate(-6deg)} 65%{opacity:1;transform:scale(1.08) rotate(1deg)} 66.5%{transform:scale(.97)} 68%,76%{transform:scale(1) rotate(0)} 79%,100%{opacity:0} }
+
+.exp-shield-body { fill: var(--navy); }
+.exp-shield-tick { stroke: var(--gold); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.exp-attacker-box { fill: var(--red-bg); stroke: var(--red); stroke-width: 1.5; }
+.exp-attacker-text { fill: var(--red); font-size: 10px; font-weight: 800; text-anchor: middle; font-family: var(--font-geist-mono), monospace; }
+
+@keyframes shield-in { 0%,66%{opacity:0;transform:scale(.8)} 69%,77%{opacity:1;transform:scale(1)} 79%,100%{opacity:0} }
+.exp-shield { animation: shield-in 24s linear infinite; transform-origin: 130px 27px; }
+
+@keyframes attacker-bounce { 0%,68%{opacity:0;transform:translateX(-30px)} 70%{opacity:1;transform:translateX(0)} 72.5%{transform:translateX(46px)} 74%{transform:translateX(30px) rotate(-8deg)} 77%{transform:translateX(-24px) rotate(-16deg);opacity:.5} 79%,100%{opacity:0;transform:translateX(-40px)} }
+.exp-attacker { animation: attacker-bounce 24s linear infinite; }
+
+/* ── act 5 · the receipt prints out of the machine */
+@keyframes print-out { 0%,81%{transform:translateY(-104px)} 90%,97%{transform:translateY(0)} 100%{transform:translateY(0)} }
+.exp-print { animation: print-out 24s cubic-bezier(.2, .8, .2, 1) infinite; }
+
+@keyframes seal-in { 0%,91%{opacity:0;transform:scale(.5) rotate(-16deg)} 94%{opacity:1;transform:scale(1.12) rotate(3deg)} 95.5%,97%{transform:scale(1) rotate(0)} 100%{opacity:1} }
+.exp-seal { animation: seal-in 24s linear infinite; transform-origin: 130px 120px; }
+
+/* The bar at the foot is the only clock the viewer needs. */
+.exp-track { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--panel-high); z-index: 2; }
+.exp-progress { display: block; height: 100%; width: 100%; transform-origin: left; background: linear-gradient(90deg, var(--gold), #b45309); animation: run-clock 24s linear infinite; }
+@keyframes run-clock { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.exp-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+
+.exp-btn {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--navy);
+  transition: background-color .2s ease, border-color .2s ease;
+}
+.exp-btn:hover { background: var(--panel-high); border-color: var(--border-strong); }
+.exp-hint { font-size: .78rem; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .exp { height: 380px; }
+  .exp-cap { font-size: .92rem; }
+}
+
+/* Reduced motion: no loop, no clock, no camera. The five acts become five
+   static panels, so every figure survives the absence of animation. */
+@media (prefers-reduced-motion: reduce) {
+  .exp-act, .exp-flutter, .exp-row, .exp-poison, .exp-bang, .exp-bob, .exp-antenna, .exp-blink,
+  .exp-nokey, .exp-note, .exp-chip, .exp-belt-tick, .exp-gate, .exp-ping, .exp-rule, .exp-stamp,
+  .exp-shield, .exp-attacker, .exp-print, .exp-seal, .exp-progress {
+    animation: none !important;
+  }
+  .exp { height: auto; }
+  .exp::after { display: none; }
+  .exp-act { position: relative; opacity: 1; transform: none; border-bottom: 1px solid var(--border); }
+  .exp-act:last-of-type { border-bottom: 0; }
+  .exp-chip, .exp-ping, .exp-attacker { opacity: 1; }
+  .exp-track { display: none; }
 }
 
 /* Cards that lift on hover. One class so no component invents its own easing. */
