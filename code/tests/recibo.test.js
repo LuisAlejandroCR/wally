@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import { inspect } from 'node:util'
 
 import WDK from '@tetherto/wdk'
 
@@ -100,13 +101,54 @@ test('un CSV inexistente produce un recibo de fallo, no una traza', async () => 
   assert.equal(recibo.totals.cuadra, true)
 })
 
-test('el recibo nunca contiene la seed ni una llave privada', async () => {
-  const { recibo } = await correr({ ...base, csv: limpio, cfg })
-  // El sha256 del CSV es un hash declarado, no un secreto: se excluye del barrido.
-  const texto = JSON.stringify({ ...recibo, run: { ...recibo.run, inputSha256: null } })
+/**
+ * Deteccion de fuga de secretos.
+ *
+ * Buscar cada palabra de la seed por separado no es deteccion, es ruido: decenas de
+ * palabras BIP-39 son palabras corrientes que un recibo de pagos escribe con todo
+ * derecho — `dry` dentro de `dry-run`, y tambien `run`, `token`, `total`, `red`, `gas`,
+ * `key`, `error`, `unit`. Una corrida saco `dry` y el test denuncio una fuga que no
+ * existia. Lo concluyente no es la palabra, es la *secuencia*: una seed filtrada aparece
+ * como frase completa o, como minimo, como una ventana contigua de sus palabras en orden.
+ * Tres palabras seguidas de la seed no caen juntas en un recibo por casualidad.
+ */
+const VENTANA_DELATORA = 3
 
-  for (const palabra of SEED.split(/\s+/)) {
-    assert.ok(!new RegExp(`\\b${palabra}\\b`).test(texto), `la palabra "${palabra}" de la seed aparece en el recibo`)
+/** Aplana a minusculas y solo letras, para que la puntuacion no esconda una secuencia. */
+function normalizar (texto) {
+  return texto.toLowerCase().replace(/[^a-z]+/g, ' ').trim()
+}
+
+function ventanas (palabras, n) {
+  const out = []
+  for (let i = 0; i + n <= palabras.length; i++) out.push(palabras.slice(i, i + n).join(' '))
+  return out
+}
+
+test('el recibo nunca contiene la seed ni una llave privada', async () => {
+  const { recibo, markdown } = await correr({ ...base, csv: limpio, cfg })
+  // El sha256 del CSV es un hash declarado, no un secreto: se excluye del barrido.
+  const sinHash = { ...recibo, run: { ...recibo.run, inputSha256: null } }
+
+  // Las tres serializaciones alcanzables: el JSON que se escribe a disco, el markdown que
+  // se lee en pantalla, y el objeto tal como lo imprimiria un log de depuracion.
+  const serializaciones = {
+    'recibo.json': JSON.stringify(sinHash),
+    'recibo.md': markdown,
+    'objeto inspeccionado': inspect(sinHash, { depth: null })
   }
-  assert.ok(!/[0-9a-fA-F]{64}/.test(texto), 'hay algo con forma de llave privada en el recibo')
+
+  const palabras = SEED.split(/\s+/)
+  const secuencias = [normalizar(SEED), ...ventanas(palabras, VENTANA_DELATORA)]
+
+  for (const [donde, texto] of Object.entries(serializaciones)) {
+    const plano = normalizar(texto)
+    for (const secuencia of secuencias) {
+      assert.ok(!plano.includes(secuencia), `secuencia de la seed "${secuencia}" presente en ${donde}`)
+    }
+
+    // Material de llave derivada: 32 bytes en hexadecimal, con o sin 0x. La API publica de
+    // WDK no expone la llave, asi que se vigila su forma dondequiera que pudiera colarse.
+    assert.ok(!/(?:0x)?[0-9a-fA-F]{64}/.test(texto), `hay algo con forma de llave privada en ${donde}`)
+  }
 })
