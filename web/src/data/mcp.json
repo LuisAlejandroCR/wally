@@ -1,0 +1,147 @@
+{
+  "server": "cerrojo",
+  "version": "0.1.0",
+  "transport": "stdio",
+  "captured": "2026-08-23T07:05:38Z",
+  "note": "Captured from a real MCP session against src/mcp/server.js. The JSON below is what the server answered, unedited.",
+  "tools": [
+    {
+      "name": "cerrojo_politicas",
+      "label": "List the policies",
+      "body": "Caps, allowlist and the permitted token. Read only.",
+      "readOnly": true
+    },
+    {
+      "name": "cerrojo_simular_pago",
+      "label": "Simulate one payment",
+      "body": "ALLOW or DENY from the WDK policy engine, with the policy, the rule and the reason. Touches no network.",
+      "readOnly": true
+    },
+    {
+      "name": "cerrojo_correr_nomina",
+      "label": "Run a payroll",
+      "body": "CSV in, receipt out. Always dry-run: this server has no way to ask for live.",
+      "readOnly": false
+    },
+    {
+      "name": "cerrojo_estado_diario",
+      "label": "Today's counter",
+      "body": "How much of the daily cap is committed, and how much is left.",
+      "readOnly": true
+    },
+    {
+      "name": "cerrojo_recibo_de",
+      "label": "Re-read a receipt",
+      "body": "Any earlier run, by its id.",
+      "readOnly": true
+    },
+    {
+      "name": "cerrojo_saldo",
+      "label": "Treasury balance",
+      "body": "Read through toReadOnlyAccount(), an object with no send method on it.",
+      "readOnly": true
+    },
+    {
+      "name": "cerrojo_cotizar",
+      "label": "Quote a fee",
+      "body": "What a transfer would cost. A quote is not a permission.",
+      "readOnly": true
+    },
+    {
+      "name": "cerrojo_proponer_pago",
+      "label": "Propose a payment",
+      "body": "If the policies allow it, leaves a voucher for a person. Signs nothing.",
+      "readOnly": false
+    },
+    {
+      "name": "cerrojo_estado_vale",
+      "label": "Voucher status",
+      "body": "Proposed, approved, executed, denied, rejected or expired. Looking at a voucher does not move it.",
+      "readOnly": true
+    }
+  ],
+  "absent": [
+    {
+      "name": "cerrojo_enviar",
+      "body": "No tool signs or sends. Not in dry-run, not with a flag, not at all."
+    },
+    {
+      "name": "cerrojo_aprobar",
+      "body": "Approving exists only in the CLI, where a person types it. A prompt cannot pay itself."
+    }
+  ],
+  "transcript": [
+    {
+      "step": 1,
+      "title": "The agent asks for 900 USDT",
+      "tool": "cerrojo_simular_pago",
+      "request": {
+        "destinatario": "0x000000000000000000000000000000000000dEaD",
+        "monto_base": "900000000"
+      },
+      "response": {
+        "decision": "DENY",
+        "politica": "cap-por-transferencia",
+        "regla": "denegar-sobre-tope",
+        "razon": "Supera el tope por transferencia de 500000000 unidades base (500.000000 USDT).",
+        "monto_legible": "900.000000 USDT",
+        "traza": [
+          {
+            "scope": "project",
+            "policy_id": "transferencia-de-nomina",
+            "rule_name": "permitir-transfer",
+            "matched": true
+          },
+          {
+            "scope": "project",
+            "policy_id": "cap-por-transferencia",
+            "rule_name": "denegar-sobre-tope",
+            "matched": true
+          }
+        ]
+      },
+      "reading": "Refused by name, and the trace shows both rules that looked at it. No network was touched to say no."
+    },
+    {
+      "step": 2,
+      "title": "It tries a stranger instead",
+      "tool": "cerrojo_proponer_pago",
+      "request": {
+        "destinatario": "0x17d5D5fC28ee6240e1129CCBf386458071b056F9",
+        "monto_base": "250000000",
+        "motivo": "probe"
+      },
+      "response": {
+        "creado": false,
+        "decision": "DENY",
+        "politica": "cap-diario",
+        "regla": "denegar-sobre-acumulado",
+        "razon": "La suma del dia superaria el tope diario de 1500000000 unidades base (1500.000000 USDT).",
+        "nota": "No se crea vale para una orden denegada. Cambia la orden, no la politica."
+      },
+      "reading": "The recipient is on the list and the amount is under the per-transfer cap — and it still fails, because 1,296 USDT already went out today. No voucher is created for a denied order."
+    },
+    {
+      "step": 3,
+      "title": "Within every limit, it gets a voucher — not a payment",
+      "tool": "cerrojo_proponer_pago",
+      "request": {
+        "destinatario": "0x17d5D5fC28ee6240e1129CCBf386458071b056F9",
+        "monto_base": "150000000",
+        "motivo": "probe"
+      },
+      "response": {
+        "creado": true,
+        "vale": "vale_2026-08-23T07-05-38-106Z_dd4fb7",
+        "estado": "propuesto",
+        "expira": "2026-08-23T07:20:38.106Z",
+        "monto_legible": "150.000000 USDT",
+        "destinatario": "0x17d5D5fC28ee6240e1129CCBf386458071b056F9",
+        "huella": "41d9ad9283372ee28c6eb4c87fe95c3524bcab45184ac76e730f6cfeaaaeb04a",
+        "siguiente_paso": "Una persona tiene que ejecutar en su terminal: cerrojo aprobar vale_2026-08-23T07-05-38-106Z_dd4fb7",
+        "nota": "Este servidor no puede aprobar el vale. La aprobacion vuelve a pasar por las politicas, y sin --live --confirmo la ejecucion sigue siendo dry-run."
+      },
+      "reading": "The best outcome available to the agent is a voucher that expires in fifteen minutes, fingerprinted so the order cannot change between the proposal and the signature."
+    }
+  ]
+}

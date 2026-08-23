@@ -7,6 +7,7 @@ import { policyNameEn, reasonEn, ruleNameEn } from '@/lib/english'
 import { Amount, Checks, DryRunNote, FeeNote, ReceiptTable, RunMeta, StatusPill, Totals, VerdictIcon } from '@/components/Receipt'
 import { CopyAddress } from '@/components/CopyAddress'
 import { ProofTabs } from '@/components/ProofTabs'
+import { AgentTools, McpTranscript, VoucherChain } from '@/components/AgentChannel'
 import { Card, Cta, NextSteps, Note, Page, PageHeader, Section } from '@/components/Page'
 
 export const dynamic = 'force-dynamic'
@@ -306,6 +307,30 @@ export default async function ProofPage () {
     </Section>
   )
 
+  const agentPanel = (
+    <Section
+      title={
+        <>
+          An agent asking, <em>three times</em>
+        </>
+      }
+      lead="A real MCP session against the same engine. It is refused by a cap, refused by the day's counter, and then handed a voucher instead of a payment."
+      aside="Captured from stdio."
+    >
+      <McpTranscript />
+
+      <Sub>What the server registered</Sub>
+      <AgentTools />
+
+      <Sub>And what it takes to move</Sub>
+      <VoucherChain />
+      <Note>
+        Approving is not a tool. It is a command a person types, and it re-runs the policy engine before it signs —
+        so an approval that was valid fifteen minutes ago can still be refused now.
+      </Note>
+    </Section>
+  )
+
   return (
     <Page>
       <PageHeader
@@ -315,13 +340,14 @@ export default async function ProofPage () {
             Everything the engine wrote, <em>and nothing this page decided</em>
           </>
         }
-        lead="One payroll, the same payroll under attack, and the five rules that judged both."
+        lead="One payroll, the same payroll under attack, an agent asking over MCP, and the five rules that judged all three."
       />
 
       <ProofTabs
         panels={[
           { id: 'receipt', label: 'The receipt', panel: receiptPanel, hasVerbatim: true },
           { id: 'injection', label: 'Under attack', panel: injectionPanel },
+          { id: 'agent', label: 'The agent channel', panel: agentPanel },
           { id: 'policies', label: 'The policies', panel: policiesPanel, hasVerbatim: true }
         ]}
       />

@@ -2,6 +2,7 @@ import clean from '@/data/run-clean.json'
 import type { Receipt } from '@/lib/cerrojo'
 import { LockFlow } from '@/components/LockFlow'
 import { Explainer } from '@/components/Explainer'
+import { AgentTools, VoucherChain } from '@/components/AgentChannel'
 import { Amount } from '@/components/Receipt'
 import { Card, Cta, NextSteps, Note, Page, PageHeader, Section } from '@/components/Page'
 
@@ -159,6 +160,28 @@ export default function Home () {
         lead={`Same payroll, three cells rewritten to attack the model. Identical verdict on all ${t.lineas} lines.`}
       >
         <LockFlow verdict="blocked" />
+      </Section>
+
+      <Section
+        id="agent"
+        eyebrow="The agent channel · MCP"
+        title={
+          <>
+            Give the agent a wallet. <em>Don’t give it a key.</em>
+          </>
+        }
+        lead="Cerrojo is also an MCP server. Point Claude Code or Claude Desktop at it and the agent gets nine tools over stdio — none of which can move a cent."
+        className="scroll-mt-24"
+      >
+        <AgentTools />
+
+        <h3 className="pt-3 text-lg font-bold">So the most an agent can do is ask</h3>
+        <VoucherChain />
+        <Note>
+          That asymmetry is the safety model: the channel that proposes and the channel that approves are different
+          programs, and only one of them has a person in it. A prompt cannot pay itself.
+        </Note>
+        <Cta href="/proof#agent">Read a real MCP session →</Cta>
       </Section>
 
       <Section

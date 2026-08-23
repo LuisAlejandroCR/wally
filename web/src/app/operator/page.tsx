@@ -27,12 +27,21 @@ export default async function OperatorPage () {
           <OperatorPanel liveConfigured={liveConfigured} />
         </Section>
       ) : (
-        <Section tone="panel" title="Sign in to run a payroll" lead="Every other page is open without one.">
+        <Section
+          tone="panel"
+          title="Sign in to run a payroll"
+          lead="One click with Google. Every other page — the receipt, the injection test, the agent channel, the five policies — is open without an account."
+        >
           <SignInButton mode="modal">
             <button className="rounded-full bg-gold px-5 py-2.5 font-semibold text-navy shadow-[0_14px_30px_-12px_rgba(233,162,59,0.75)] transition-colors hover:bg-gold-2">
-              Sign in
+              Sign in with Google
             </button>
           </SignInButton>
+          <p className="max-w-3xl text-sm leading-relaxed text-muted">
+            The account exists to keep one shared engine from being run by everyone at once. It widens nothing: this
+            deployment has no endpoint that executes, so the worst an authenticated run can do is write a dry-run
+            receipt and move the day’s counter.
+          </p>
         </Section>
       )}
 

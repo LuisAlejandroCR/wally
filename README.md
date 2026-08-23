@@ -7,6 +7,18 @@ Aleph Hackathon 2026 · WDK Track · built on [`@tetherto/wdk`](https://www.npmj
 
 *Cerrojo* is Spanish for "deadbolt".
 
+**Try it without installing anything → [cerrojo-app.vercel.app](https://cerrojo-app.vercel.app/)**
+
+| Open this | To see |
+|---|---|
+| [`/proof#receipt`](https://cerrojo-app.vercel.app/proof#receipt) | a real receipt: 12 lines, 7 paid, 2 refused by rule, 3 set aside |
+| [`/proof#injection`](https://cerrojo-app.vercel.app/proof#injection) | the same payroll with three cells rewritten to attack the model |
+| [`/proof#agent`](https://cerrojo-app.vercel.app/proof#agent) | a real MCP session: an agent asking three times and never getting paid |
+| [`/operator`](https://cerrojo-app.vercel.app/operator) | run a payroll yourself — one click with Google, dry-run only |
+
+The first three need no account. `/operator` is signed-in because it drives one shared engine; it
+still cannot send funds, because this deployment exposes no endpoint that executes.
+
 ---
 
 ## The problem
@@ -200,8 +212,10 @@ response:
 
 * **`app/`** — the local demo UI, no dependencies, no build step. Its best screen is *Compare clean
   against poisoned*: two real runs side by side. Start instructions in [`app/README.md`](app/README.md).
-* **`web/`** — the deployable version (Next.js on Vercel, sign-in–gated operator screen). See
-  [`web/README.md`](web/README.md).
+* **`web/`** — the deployable version, live at
+  [cerrojo-app.vercel.app](https://cerrojo-app.vercel.app/) (Next.js on Vercel, sign-in–gated operator
+  screen). Its `/proof` screen carries four tabs: the receipt, the same payroll under attack, a
+  captured MCP session, and the five policies rule by rule. See [`web/README.md`](web/README.md).
 
 ## Run it
 
@@ -265,7 +279,7 @@ node src/cli.js run --csv ./mi_nomina.csv --instruccion "paga la nomina de agost
 
 | Measurement | Result |
 |---|---|
-| Test suite | 151 tests, all offline, no network |
+| Test suite | 166 tests, all offline, no network |
 | Policy eval, 20 cases × 5 runs | 20/20 perfect |
 | **False permits** — something denied that went through anyway | **0** |
 | **Dangerous drift** under injection, 5 paired live-model runs | **0** |

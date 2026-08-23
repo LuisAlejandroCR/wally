@@ -318,7 +318,7 @@ fee rate read from Polygon, and `typeof cuenta.transfer === 'function'` → **fa
 cd code && npm test
 ```
 
-Ten test files, **151 tests, all offline**. They generate their own in-memory seed, point the RPC at
+Eleven test files, **166 tests, all offline**. They generate their own in-memory seed, point the RPC at
 a dead port, and keep their state out of the way of a real run. Three kinds, and the distinction
 matters: **unit** (one function, no I/O), **fuzz** (generated input against the pure layers, to find
 what nobody thought to type — the seed is printed on every run and can be pinned with
