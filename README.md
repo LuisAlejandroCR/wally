@@ -219,7 +219,10 @@ with no matching `ALLOW` rule is refused with `no-applicable-rule`, and Cerrojo 
 
 Tether's own `@tetherto/wdk-cli` is wired in downstream and held to the same wallet by
 `cerrojo paridad`, which also shows the bare CLI carrying a denied 900 USDT payment to the node,
-because it has no cap and no allowlist. [Details](DEV.md#wdk-integration-in-detail).
+because it has no cap and no allowlist. [Details](DEV.md#wdk-integration-in-detail), including
+[nine permalinks into that seam](DEV.md#the-wdk-cli-seam-line-by-line) — where `--dry-run` stops
+being optional, where the two wallets are compared, and where a denied line fails to find a path
+to the CLI.
 
 <!-- Permalinks are pinned to 0419f987980d181394714a609b73d3918f9845b8, an ancestor of main, and all ten line ranges were verified against the file contents at that SHA. -->
 

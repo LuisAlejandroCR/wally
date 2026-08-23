@@ -172,6 +172,23 @@ in a minute:
 `wdk send` is invoked with `--dry-run` hardcoded into the argument builder rather than passed as an
 option, so no caller can drop it.
 
+
+### The `wdk-cli` seam, line by line
+
+<!-- Pinned to fba241bd54ef7d2cfeccb82c95e4a86d836be371; all nine line ranges were verified against the file contents at that SHA. -->
+
+| Seam | Permalink | What happens there |
+|---|---|---|
+| `wdk send` argument builder | [`src/wdk/cli.js#L46-L65`](https://github.com/LuisAlejandroCR/wally/blob/fba241bd54ef7d2cfeccb82c95e4a86d836be371/code/src/wdk/cli.js#L46-L65) | `--dry-run` and `--base-units` are appended unconditionally. There is no parameter that removes them, so no caller can turn a parity check into a send |
+| CLI process wrapper | [`src/wdk/cli.js#L71-L107`](https://github.com/LuisAlejandroCR/wally/blob/fba241bd54ef7d2cfeccb82c95e4a86d836be371/code/src/wdk/cli.js#L71-L107) | spawns the `wdk` binary, parses the last JSON object it printed, and treats a non-zero exit as data rather than an exception |
+| Address parity | [`src/wdk/cli.js#L109-L114`](https://github.com/LuisAlejandroCR/wally/blob/fba241bd54ef7d2cfeccb82c95e4a86d836be371/code/src/wdk/cli.js#L109-L114) | `wdk get address --network sepolia --json`, compared against the SDK's own `getAddress()`. Both return `0xD570...754e` |
+| One line, dry-run | [`src/wdk/cli.js#L116-L136`](https://github.com/LuisAlejandroCR/wally/blob/fba241bd54ef7d2cfeccb82c95e4a86d836be371/code/src/wdk/cli.js#L116-L136) | `wdk send --token usdt --base-units --dry-run`, returning the CLI's verdict verbatim, error included |
+| The gate | [`src/paridad.js#L47-L61`](https://github.com/LuisAlejandroCR/wally/blob/fba241bd54ef7d2cfeccb82c95e4a86d836be371/code/src/paridad.js#L47-L61) | anything not `ejecutada` returns before the adapter is reached. A denied line has no path to the CLI |
+| Reading the CLI's failure | [`src/paridad.js#L111-L126`](https://github.com/LuisAlejandroCR/wally/blob/fba241bd54ef7d2cfeccb82c95e4a86d836be371/code/src/paridad.js#L111-L126) | a revert for balance is labelled a chain revert, never a policy refusal. The CLI has no policy to refuse with |
+| The command | [`src/cli.js#L112-L140`](https://github.com/LuisAlejandroCR/wally/blob/fba241bd54ef7d2cfeccb82c95e4a86d836be371/code/src/cli.js#L112-L140) | runs the ordinary pipeline, then the parity pass over its receipt. Exits non-zero if the two surfaces ever derive different wallets |
+| `--dry-run` is not optional | [`tests/paridad.test.js#L40-L60`](https://github.com/LuisAlejandroCR/wally/blob/fba241bd54ef7d2cfeccb82c95e4a86d836be371/code/tests/paridad.test.js#L40-L60) | asserted over hostile input, including `{ dryRun: false, live: true, confirmo: true }` |
+| Nothing denied is handed over | [`tests/paridad.test.js#L85-L102`](https://github.com/LuisAlejandroCR/wally/blob/fba241bd54ef7d2cfeccb82c95e4a86d836be371/code/tests/paridad.test.js#L85-L102) | a fake adapter records every call it receives; only the approved line ever appears in it |
+
 ### Two findings from reading the installed WDK source
 
 Both changed the design.
