@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+// src/mcp/server.js
+//
+// Cerrojo as an MCP server: the same pipeline, aimed at an agent instead of a
+// person. The tools an agent gets here can read, quote and propose; the one it
+// does not get is approve. Everything a payment needs in order to move still has
+// to pass a human and then the policy engine, in that order.
+
 import { join } from 'node:path'
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -10,19 +17,26 @@ import { formatearMonto } from '../ingest/amount.js'
 import { construirPoliticas } from '../policy/index.js'
 import { LedgerDiario } from '../policy/ledger.js'
 import { abrirSesion } from '../wdk/session.js'
+import { estimarComision, panelMainnet } from '../execute/index.js'
+import { Vales } from '../vales.js'
 import { correr } from '../run.js'
 import { reciboMarkdown } from '../receipt/markdown.js'
 
 /**
- * Cerrojo como servidor MCP: la misma tuberia, para un agente en vez de un humano.
+ * What an agent connected here **cannot** do, by construction:
+ *   - actually send: no tool signs or executes live.
+ *   - **approve its own proposal**: no tool approves a voucher. Approving exists
+ *     only in the CLI, where a person types it. That asymmetry is the safety
+ *     model — a prompt cannot pay itself.
+ *   - go over a cap: the decision belongs to WDK's policy engine, not the prompt.
+ *   - see the seed: no tool returns it, not even in part.
  *
- * Lo que un agente conectado aqui **no** puede hacer, por construccion:
- *   - enviar de verdad: no hay herramienta que ejecute en vivo. Todo es dry-run.
- *   - pasarse de un tope: la decision la toma el motor de politicas de WDK, no el prompt.
- *   - ver la seed: ninguna herramienta la devuelve, ni siquiera parcialmente.
+ * What it can do: read balances, quote a fee, simulate a payment against the
+ * policies, and leave a proposed voucher for a human to approve.
  *
- * Es el mismo argumento del proyecto aplicado al canal de agentes: el cerrojo no
- * vive en las instrucciones que lee el modelo.
+ * Same argument as the rest of the project, applied to the agent channel: the
+ * lock does not live in the instructions the model reads. Tool descriptions stay
+ * in Spanish, matching the engine's own voice — the display layer translates.
  */
 const cfg = cargarConfig()
 
@@ -33,16 +47,20 @@ const servidor = new McpServer(
 
 const texto = (t) => ({ content: [{ type: 'text', text: t }] })
 
-async function conSesion (fn) {
+const vales = new Vales({ dir: cfg.dirEstado })
+
+async function conSesion (fn, { conDemo = false } = {}) {
   const allowlist = cargarAllowlist(cfg.allowlistPath)
   const ledger = new LedgerDiario({ dir: cfg.dirEstado, network: cfg.network })
-  const sesion = await abrirSesion({ seed: leerSeed(), cfg, ledger, allowlist })
+  const sesion = await abrirSesion({ seed: leerSeed(), cfg, ledger, allowlist, conDemo })
   try {
     return await fn({ sesion, ledger, allowlist })
   } finally {
     sesion.cerrar()
   }
 }
+
+const legible = (base) => `${formatearMonto(BigInt(base), cfg.token.decimals)} ${cfg.token.symbol}`
 
 servidor.registerTool(
   'cerrojo_politicas',
@@ -176,6 +194,155 @@ servidor.registerTool(
     } catch {
       return texto(`No hay recibo para la corrida ${runId} en ${cfg.dirRuns}.`)
     }
+  }
+)
+
+servidor.registerTool(
+  'cerrojo_saldo',
+  {
+    title: 'Saldo de la tesoreria',
+    description: 'Saldo nativo y de USDT en la tesoreria, en la red que ejecuta. Con incluir_mainnet ademas lee una red real en SOLO LECTURA. No mueve nada.',
+    inputSchema: {
+      incluir_mainnet: z.boolean().optional().describe('Agrega el panel de mainnet en solo lectura (saldos y tarifas reales)')
+    },
+    annotations: { readOnlyHint: true }
+  },
+  async ({ incluir_mainnet: incluirMainnet = false }) => conSesion(async ({ sesion, ledger }) => {
+    const ro = sesion.cuentaSoloLectura
+    const [nativo, token] = await Promise.all([
+      ro.getBalance().catch(() => null),
+      ro.getTokenBalance(cfg.token.address).catch(() => null)
+    ])
+
+    const salida = {
+      red: cfg.network,
+      tesoreria: sesion.tesoreria,
+      saldo_nativo_wei: nativo === null ? null : nativo.toString(),
+      saldo_token_base: token === null ? null : token.toString(),
+      saldo_token_legible: token === null ? null : legible(token),
+      token: cfg.token,
+      margen_hoy_base: ledger.restante(cfg.capDay).toString(),
+      margen_hoy_legible: legible(ledger.restante(cfg.capDay)),
+      nota: 'Lectura desde toReadOnlyAccount(): este objeto no tiene metodo de envio.'
+    }
+
+    if (incluirMainnet) salida.mainnet = await panelMainnet({ sesion, cfg })
+    return texto(JSON.stringify(salida, null, 2))
+  }, { conDemo: incluirMainnet })
+)
+
+servidor.registerTool(
+  'cerrojo_cotizar',
+  {
+    title: 'Cotizar la comision de un pago',
+    description: 'Estima lo que costaria en comision enviar un monto a un destinatario. No firma ni envia, y no crea ningun vale.',
+    inputSchema: {
+      destinatario: z.string().describe('Direccion EVM del destinatario (0x...)'),
+      monto_base: z.string().describe('Monto en unidades base enteras. Con 6 decimales, 250 USDT = "250000000"')
+    },
+    annotations: { readOnlyHint: true }
+  },
+  async ({ destinatario, monto_base: montoBase }) => conSesion(async ({ sesion }) => {
+    const orden = { token: cfg.token.address, recipient: destinatario, amount: BigInt(montoBase) }
+    const cotizacion = await estimarComision({ sesion, orden, cfg })
+
+    return texto(JSON.stringify({
+      red: cfg.network,
+      destinatario,
+      monto_base: montoBase,
+      monto_legible: legible(montoBase),
+      comision_wei: cotizacion.feeEstimada,
+      exacta: cotizacion.quoteExacto,
+      nota: cotizacion.quoteNota,
+      aviso: 'Una cotizacion no es un permiso. El veredicto de politica se pide con cerrojo_simular_pago.'
+    }, null, 2))
+  })
+)
+
+servidor.registerTool(
+  'cerrojo_proponer_pago',
+  {
+    title: 'Proponer un pago para que lo apruebe una persona',
+    description: 'Evalua un pago contra las politicas y, si pasa, deja un VALE propuesto. No firma ni envia nada: un vale solo avanza cuando una persona lo aprueba desde la CLI, que es la unica parte del sistema donde existe aprobar.',
+    inputSchema: {
+      destinatario: z.string().describe('Direccion EVM del destinatario (0x...)'),
+      monto_base: z.string().describe('Monto en unidades base enteras'),
+      motivo: z.string().optional().describe('Para que es el pago, en una linea. Viaja con el vale y lo lee quien aprueba.')
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false }
+  },
+  async ({ destinatario, monto_base: montoBase, motivo }) => conSesion(async ({ sesion }) => {
+    const orden = { token: cfg.token.address, recipient: destinatario, amount: BigInt(montoBase) }
+    const verdicto = await sesion.cuenta.simulate.transfer(orden)
+
+    if (verdicto.decision !== 'ALLOW') {
+      return texto(JSON.stringify({
+        creado: false,
+        decision: verdicto.decision,
+        politica: verdicto.policy_id,
+        regla: verdicto.matched_rule,
+        razon: verdicto.reason,
+        nota: 'No se crea vale para una orden denegada. Cambia la orden, no la politica.'
+      }, null, 2))
+    }
+
+    const vale = vales.crear({
+      orden: { recipient: destinatario, amount: montoBase },
+      veredicto: verdicto,
+      network: cfg.network,
+      token: cfg.token,
+      motivo: motivo ?? null
+    })
+
+    return texto(JSON.stringify({
+      creado: true,
+      vale: vale.id,
+      estado: vale.estado,
+      expira: vale.expira,
+      monto_legible: legible(montoBase),
+      destinatario,
+      huella: vale.huella,
+      siguiente_paso: `Una persona tiene que ejecutar en su terminal: cerrojo aprobar ${vale.id}`,
+      nota: 'Este servidor no puede aprobar el vale. La aprobacion vuelve a pasar por las politicas, y sin --live --confirmo la ejecucion sigue siendo dry-run.'
+    }, null, 2))
+  })
+)
+
+servidor.registerTool(
+  'cerrojo_estado_vale',
+  {
+    title: 'Estado de un vale',
+    description: 'En que estado esta un vale: propuesto, aprobado, ejecutado, denegado, rechazado o expirado. Solo lectura: mirar un vale no lo mueve.',
+    inputSchema: { vale: z.string().optional().describe('Id del vale. Sin id, lista los vales pendientes.') },
+    annotations: { readOnlyHint: true }
+  },
+  async ({ vale: id }) => {
+    if (!id) {
+      const pendientes = vales.pendientes().map((v) => ({
+        vale: v.id,
+        destinatario: v.orden.recipient,
+        monto_legible: legible(v.orden.amount),
+        motivo: v.motivo,
+        expira: v.expira
+      }))
+      return texto(JSON.stringify({ pendientes, total: pendientes.length }, null, 2))
+    }
+
+    const v = vales.leer(id)
+    if (!v) return texto(JSON.stringify({ vale: id, existe: false }, null, 2))
+
+    return texto(JSON.stringify({
+      vale: v.id,
+      existe: true,
+      estado: v.estado,
+      destinatario: v.orden.recipient,
+      monto_legible: legible(v.orden.amount),
+      motivo: v.motivo,
+      creado: v.creado,
+      expira: v.expira,
+      aprobadoEn: v.aprobadoEn,
+      resuelto: v.resuelto
+    }, null, 2))
   }
 )
 

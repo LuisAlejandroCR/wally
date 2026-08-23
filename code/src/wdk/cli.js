@@ -1,3 +1,10 @@
+// src/wdk/cli.js
+//
+// A thin adapter over @tetherto/wdk-cli. It exists to prove one thing: that
+// Tether's own CLI and Cerrojo's policy engine derive the same wallet, and that
+// the CLI on its own carries no cap and no allowlist. Every send it builds is
+// hard-wired to --dry-run, and the seed never passes through here.
+
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -6,19 +13,15 @@ import { RAIZ } from '../config.js'
 import { CerrojoError } from '../errors.js'
 
 /**
- * Adaptador sobre @tetherto/wdk-cli.
+ * Two rules this module keeps:
  *
- * Existe para una sola cosa: demostrar que la CLI oficial de WDK y el motor de
- * politicas de Cerrojo son la misma billetera, y que la CLI sola no tiene tope
- * ni allowlist. Por eso este modulo:
+ *   1. it **never** builds a send without `--dry-run` — the flag is hard-coded in
+ *      construirArgsSend() and no parameter removes it, and
+ *   2. it only receives lines the lock already approved, unless asked explicitly
+ *      otherwise for the demonstration in §4.
  *
- *   1. **nunca** construye un send sin `--dry-run` — la bandera esta hardcodeada
- *      en construirArgsSend() y no hay parametro que la quite, y
- *   2. solo recibe lineas que el cerrojo ya aprobo, salvo que se le pida
- *      explicitamente lo contrario para la demostracion de la §4.
- *
- * La seed no pasa por aqui: la CLI la tiene en su propio llavero cifrado, y el
- * passphrase llega por WDK_PASSPHRASE, que nunca se imprime.
+ * The seed does not pass through here: the CLI keeps it in its own encrypted
+ * keyring, and the passphrase arrives via WDK_PASSPHRASE, which is never printed.
  */
 
 export const RUTA_WDK = resolve(RAIZ, 'node_modules/@tetherto/wdk-cli/bin/wdk.mjs')
@@ -44,10 +47,10 @@ export const errWalletBloqueada = (wallet) => new CerrojoError(
 )
 
 /**
- * Arma los argumentos de `wdk send`.
+ * Builds the arguments for `wdk send`.
  *
- * `--dry-run` no es un parametro: es parte de la definicion. Un test lo afirma
- * sobre cada combinacion de entradas, para que nadie lo vuelva opcional.
+ * `--dry-run` is not a parameter: it is part of the definition. A test asserts it
+ * over every combination of inputs, so that nobody can make it optional.
  */
 export function construirArgsSend ({ network, token, to, amount }) {
   if (!network) throw new TypeError('construirArgsSend: falta network')
@@ -68,7 +71,7 @@ export function construirArgsDireccion ({ network }) {
   return ['get', 'address', '--network', network, '--json']
 }
 
-/** Corre la CLI y devuelve su JSON. Nunca lanza por un exit != 0: eso es un dato. */
+/** Runs the CLI and returns its JSON. A non-zero exit never throws: it is data. */
 export async function correrWdk (args, { timeoutMs = TIMEOUT_MS, env = process.env } = {}) {
   if (!cliDisponible()) throw errCliAusente()
 
@@ -90,7 +93,7 @@ export async function correrWdk (args, { timeoutMs = TIMEOUT_MS, env = process.e
       clearTimeout(temporizador)
       const crudo = (salida + error).trim()
       let json = null
-      // La CLI mezcla avisos con el JSON; se toma el ultimo objeto que parsee.
+      // The CLI mixes warnings into the JSON; take the last object that parses.
       for (const linea of crudo.split('\n').reverse()) {
         const t = linea.trim()
         if (!t.startsWith('{')) continue
@@ -106,7 +109,7 @@ export async function correrWdk (args, { timeoutMs = TIMEOUT_MS, env = process.e
   })
 }
 
-/** Direccion que deriva la CLI para esta red. La comparacion con el SDK es la prueba de paridad. */
+/** The address the CLI derives for this network. Comparing it with the SDK is the parity proof. */
 export async function direccionCli ({ network }) {
   const r = await correrWdk(construirArgsDireccion({ network }))
   if (r.json?.code === 'WALLET_NOT_UNLOCKED') throw errWalletBloqueada(process.env.CERROJO_WDKCLI_WALLET ?? 'default')
@@ -114,10 +117,10 @@ export async function direccionCli ({ network }) {
 }
 
 /**
- * Pasa UNA linea a la CLI en dry-run.
+ * Hands ONE line to the CLI in dry-run.
  *
- * Devuelve el veredicto de la CLI tal cual, incluido el error: que la CLI no
- * refuse una linea que el cerrojo si refuso es exactamente lo que se quiere ver.
+ * It returns the CLI's verdict untouched, error included: the CLI failing to
+ * refuse a line the lock did refuse is exactly what we want on screen.
  */
 export async function dryRunLinea ({ network, token, to, amount }) {
   const args = construirArgsSend({ network, token, to, amount })
@@ -126,8 +129,8 @@ export async function dryRunLinea ({ network, token, to, amount }) {
   return {
     args: args.join(' '),
     ok: r.codigo === 0 && !r.json?.error,
-    // La CLI no distingue "denegado por politica" de "reverso en la cadena":
-    // no tiene politicas. Se guarda el codigo para leerlo en el reporte.
+    // The CLI cannot tell "denied by policy" from "reverted on chain": it has no
+    // policies. The code is kept so the report can show it.
     errorCode: r.json?.code ?? null,
     error: r.json?.error ?? null,
     resultado: r.json?.error ? null : r.json,

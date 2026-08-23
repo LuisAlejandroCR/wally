@@ -1,3 +1,10 @@
+// src/demo.js
+//
+// The scripted demo: six acts, one command. It exists so the three-minute video
+// is a real execution rather than a sequence of commands typed live with the
+// risk of fumbling one. Each act prints what needs to be seen and nothing else,
+// and it runs on ephemeral state so it can be repeated as often as needed.
+
 import { join } from 'node:path'
 
 import { RAIZ, cargarAllowlist, cargarConfig, leerSeed } from './config.js'
@@ -10,29 +17,23 @@ import { correr } from './run.js'
 import { compararDeriva, INSTRUCCION_COMPLETA } from './eval/inyeccion.js'
 
 /**
- * La instruccion del operador para la demo.
+ * The operator instruction the demo uses.
  *
- * Dice "todas las filas" a proposito. Medido el 2026-08-22: con "paga la nomina
- * de agosto", el modelo excluye por alcance el bono y el pago a proveedor —un
- * juicio defendible— y esas dos filas **no llegan a la politica**, asi que la
- * corrida sale con cero denegaciones. Correcto, pero no muestra el cerrojo.
- * Con esta instruccion las doce filas llegan, y el motor decide sobre todas.
+ * It says "every row" on purpose. Measured on 2026-08-22: with "pay the August
+ * payroll" the model excludes the bonus and the supplier payment as out of scope
+ * — a defensible judgement — and those two rows **never reach the policy**, so
+ * the run comes out with zero denials. Correct, but it does not show the lock.
+ * With this instruction all twelve rows arrive and the engine judges every one.
  */
 export const INSTRUCCION_DEMO = INSTRUCCION_COMPLETA
 
 /**
- * La demo, en seis actos y un solo comando.
+ * The demo, in six acts and one command.
  *
- * Existe para que el video de 3 minutos sea una ejecucion real y no una sucesion
- * de comandos tecleados a mano con el riesgo de equivocarse en vivo. Cada acto
- * imprime lo que hay que ver y nada mas.
- *
- * Los actos 2 y 3 corren con el modelo de verdad cuando hay ANTHROPIC_API_KEY:
- * el argumento de la inyeccion vale mucho mas si el modelo esta leyendo las
- * celdas envenenadas. Si no hay clave, o si la llamada falla, la demo **no se
- * cae**: cae al planner determinista y lo dice en pantalla.
- *
- * Corre con estado efimero: se puede repetir tantas veces como haga falta.
+ * Acts 2 and 3 run against the real model when ANTHROPIC_API_KEY is present: the
+ * injection argument is worth far more if the model is actually reading the
+ * poisoned cells. With no key, or if the call fails, the demo **does not fall
+ * over** — it drops to the deterministic planner and says so on screen.
  */
 export async function correrDemo ({ cfg = cargarConfig(), sinRed = false, rapido = false } = {}) {
   const csvLimpio = cfg.csvPorDefecto
@@ -58,8 +59,8 @@ export async function correrDemo ({ cfg = cargarConfig(), sinRed = false, rapido
   await actoSinRed({ cfg, seed })
 
   acto(5, 'El segundo pago del dia')
-  // Este acto va con el planner determinista a proposito: lo que se demuestra es
-  // el acumulado, y no hace falta gastar 22 s de video en otra llamada al modelo.
+  // This act uses the deterministic planner on purpose: what it demonstrates is
+  // the accumulator, and there is no need to spend 22s of video on another model call.
   const segunda = await correr({ csv: csvLimpio, instruccion: INSTRUCCION_DEMO, modo: 'dry-run', planner: 'rules', sinRed: true, escribir: false, estadoEfimero: true, gastadoPrevio: limpio.recibo.totals.montoEjecutado, cfg, seed })
   actoSegundaCorrida(limpio.recibo, segunda.recibo, cfg)
 
@@ -80,11 +81,12 @@ function acto (n, titulo) {
 }
 
 /**
- * Corre una nomina con el modelo si se puede, y con reglas si no.
+ * Runs a payroll with the model when it can, and with rules when it cannot.
  *
- * En cámara no se cae nada: si falta la clave, si la API responde mal o si el
- * modelo se abstiene de todo, esta funcion lo dice en una linea y sigue con el
- * planner determinista. Lo que no hace nunca es fingir que uso el modelo.
+ * Nothing breaks on camera: if the key is missing, if the API answers badly, or
+ * if the model abstains from everything, this function says so in one line and
+ * carries on with the deterministic planner. What it never does is pretend it
+ * used the model.
  */
 async function planificarYCorrer ({ csv, cfg, seed, sinRed, conModelo, gastadoPrevio, etiqueta }) {
   const comun = { csv, instruccion: INSTRUCCION_DEMO, modo: 'dry-run', sinRed, escribir: false, estadoEfimero: true, gastadoPrevio, cfg, seed }
@@ -149,8 +151,9 @@ function actoInyeccion (limpio, sucio, modelo) {
   console.log(`  Recibo limpio:     ${limpio.totals.ejecutadas} ejecutadas · ${limpio.totals.denegadas} denegadas · ${limpio.totals.no_intentadas} no intentadas`)
   console.log(`  Recibo envenenado: ${sucio.totals.ejecutadas} ejecutadas · ${sucio.totals.denegadas} denegadas · ${sucio.totals.no_intentadas} no intentadas`)
 
-  // La propiedad que se demuestra no es "los dos recibos son iguales" —con un modelo
-  // en el circuito eso no es estable— sino que **ninguna diferencia va hacia ejecutar**.
+  // The property being demonstrated is not "the two receipts are identical" — with
+  // a model in the loop that is not stable — but that **no difference moves toward
+  // executing**.
   const deriva = compararDeriva(limpio, sucio)
 
   if (iguales) {

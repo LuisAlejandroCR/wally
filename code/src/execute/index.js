@@ -1,7 +1,14 @@
+// src/execute/index.js
+//
+// The step that touches the chain, and the order it insists on: policy decides
+// first without a network, only allowed lines get quoted, and only an explicit
+// live mode sends. Every path out of here — a payroll line or an approved
+// voucher — goes through that sequence, so nothing reaches the wire unjudged.
+
 import { E } from '../errors.js'
 import { esViolacionDePolitica } from '../wdk/session.js'
 
-/** Gas tipico de un transfer ERC-20. Se usa solo para estimar, y el recibo lo marca. */
+/** Typical gas for an ERC-20 transfer. Estimation only, and the receipt says so. */
 export const GAS_TRANSFER_ERC20 = 65000n
 
 const TIMEOUT_RED_MS = 8000
@@ -19,14 +26,14 @@ async function conTimeout (promesa, ms, etiqueta) {
 }
 
 /**
- * Ejecuta un plan linea por linea.
+ * Executes a plan line by line.
  *
- * El orden importa y es el argumento del proyecto:
- *   1. la politica decide (simulate, sin red),
- *   2. solo lo permitido se cotiza,
- *   3. solo con --live se envia.
+ * The order matters and is the project's whole argument:
+ *   1. policy decides (simulate, no network),
+ *   2. only what is allowed gets quoted,
+ *   3. only --live sends.
  *
- * Ninguna linea llega a la red sin haber pasado por el paso 1.
+ * No line reaches the network without having passed step 1.
  */
 export async function ejecutarPlan ({ sesion, plan, cfg, ledger, runId, modo = 'dry-run', sinRed = false }) {
   const resultados = []
@@ -76,7 +83,7 @@ export async function ejecutarPlan ({ sesion, plan, cfg, ledger, runId, modo = '
       continue
     }
 
-    // Permitida. En dry-run no se envia nada: se estima y se registra en el acumulado.
+    // Allowed. A dry run sends nothing: it estimates and books the accumulator.
     const base = {
       row: linea.row,
       estado: 'ejecutada',
@@ -134,12 +141,12 @@ export async function ejecutarPlan ({ sesion, plan, cfg, ledger, runId, modo = '
 }
 
 /**
- * Estima la comision de un transfer.
+ * Estimates the fee for a transfer.
  *
- * Medido en el pre-vuelo: `quoteTransfer` **revierte** desde una cuenta sin
- * fondos ("ERC20: transfer amount exceeds balance"). Cuando eso pasa se cae a
- * `getFeeRates() x gas tipico` y el recibo marca `quoteExacto: false` con su
- * razon. Prohibido presentar una estimacion aproximada como si fuera exacta.
+ * Measured during the pre-flight: `quoteTransfer` **reverts** from an unfunded
+ * account ("ERC20: transfer amount exceeds balance"). When that happens it falls
+ * back to `getFeeRates() x typical gas` and the receipt marks `quoteExacto:
+ * false` with the reason. Presenting an estimate as exact is forbidden.
  */
 export async function estimarComision ({ sesion, orden, cfg, sinRed = false }) {
   if (sinRed) {
@@ -178,9 +185,9 @@ function resumirError (err) {
 }
 
 /**
- * Panel de mainnet en SOLO LECTURA: saldos y tarifas reales, cero escritura.
- * Dos cerrojos: la cuenta no expone `transfer`, y encima hay una politica que
- * deniega toda escritura en esa red.
+ * A READ-ONLY mainnet panel: real balances and real fee rates, zero writes.
+ * Two locks: the account does not expose `transfer`, and on top of that a policy
+ * denies every write on that network.
  */
 export async function panelMainnet ({ sesion, cfg }) {
   if (!sesion.demo) return null
@@ -199,8 +206,94 @@ export async function panelMainnet ({ sesion, cfg }) {
     panel.nota = `No se pudo leer ${cfg.demo.network}: ${resumirError(err)}`
   }
 
-  // Prueba viva del cerrojo estructural: el metodo de enviar no existe en este objeto.
+  // Live proof of the structural lock: the send method does not exist on this object.
   panel.transferExiste = typeof sesion.demo.cuenta.transfer === 'function'
 
   return panel
+}
+
+/**
+ * Executes a voucher a person has already approved.
+ *
+ * The order of operations is the project's, and step 2 is the whole point: the
+ * verdict stored on the voucher is not believed. Policy is evaluated again, now,
+ * against the accumulator as it stands now. A voucher approved ten minutes ago
+ * that would break today's cap is denied all the same, and the voucher keeps the
+ * record that it was denied **after** a human said yes.
+ *
+ *   1. the voucher must be approved, in date and with its fingerprint intact,
+ *   2. policy decides again, without touching the network,
+ *   3. only mode 'live' sends; dry-run is the default.
+ */
+export async function ejecutarVale ({ sesion, cfg, ledger, vales, id, modo = 'dry-run', sinRed = false }) {
+  const { ok, razon, vale } = vales.verificar(id)
+  if (!ok) return { ok: false, razon, vale }
+
+  const orden = {
+    token: vale.token.address,
+    recipient: vale.orden.recipient,
+    amount: BigInt(vale.orden.amount)
+  }
+
+  let verdicto
+  try {
+    verdicto = await sesion.cuenta.simulate.transfer(orden)
+  } catch (err) {
+    return {
+      ok: false,
+      razon: `la evaluacion de politicas fallo: ${resumirError(err)}`,
+      vale: vales.resolver(id, { estado: 'denegado', modo, why: resumirError(err) })
+    }
+  }
+
+  if (verdicto.decision === 'DENY') {
+    return {
+      ok: false,
+      razon: verdicto.reason ?? 'denegado por politica',
+      revalidacion: 'DENY',
+      vale: vales.resolver(id, {
+        estado: 'denegado',
+        modo,
+        policy: {
+          id: verdicto.policy_id ?? '<sin politica>',
+          rule: verdicto.matched_rule ?? '<sin regla>',
+          reason: verdicto.reason ?? 'sin razon declarada'
+        }
+      })
+    }
+  }
+
+  if (modo !== 'live') {
+    const cotizacion = await estimarComision({ sesion, orden, cfg, sinRed })
+    ledger.registrar({ amount: orden.amount, row: null, runId: vale.id, dryRun: true })
+    return {
+      ok: true,
+      revalidacion: 'ALLOW',
+      vale: vales.resolver(id, { estado: 'ejecutado', modo: 'dry-run', txHash: null, ...cotizacion })
+    }
+  }
+
+  try {
+    const { hash, fee } = await conTimeout(sesion.cuenta.transfer(orden), TIMEOUT_RED_MS * 4, 'transfer')
+    ledger.registrar({ amount: orden.amount, row: null, runId: vale.id, dryRun: false })
+    return {
+      ok: true,
+      revalidacion: 'ALLOW',
+      vale: vales.resolver(id, { estado: 'ejecutado', modo: 'live', txHash: hash, feeEstimada: fee?.toString() ?? null, quoteExacto: true })
+    }
+  } catch (err) {
+    if (esViolacionDePolitica(err)) {
+      return {
+        ok: false,
+        razon: err.reason,
+        revalidacion: 'DENY',
+        vale: vales.resolver(id, { estado: 'denegado', modo: 'live', policy: { id: err.policyId, rule: err.ruleName, reason: err.reason } })
+      }
+    }
+    return {
+      ok: false,
+      razon: `el envio fallo antes de confirmarse: ${resumirError(err)}`,
+      vale: vales.resolver(id, { estado: 'denegado', modo: 'live', why: resumirError(err) })
+    }
+  }
 }

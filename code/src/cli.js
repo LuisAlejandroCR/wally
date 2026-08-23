@@ -6,6 +6,8 @@ import { formatearMonto } from './ingest/amount.js'
 import { LedgerDiario } from './policy/ledger.js'
 import { construirPoliticas } from './policy/index.js'
 import { abrirSesion } from './wdk/session.js'
+import { ejecutarVale } from './execute/index.js'
+import { Vales } from './vales.js'
 import { correr } from './run.js'
 import { correrEval } from './eval/run.js'
 import { evalInyeccion } from './eval/inyeccion.js'
@@ -23,6 +25,9 @@ const AYUDA = `cerrojo — el agente propone, el cerrojo decide
   cerrojo doctor    revisa la configuracion y el entorno
   cerrojo serve     levanta la API HTTP local (para una app movil o web)
   cerrojo paridad   corre la nomina y entrega solo lo aprobado a la CLI oficial de WDK
+  cerrojo vales     lista los pagos que un agente propuso y esperan a una persona
+  cerrojo aprobar   aprueba UN vale y lo ejecuta (dry-run salvo --live --confirmo)
+  cerrojo rechazar  descarta un vale propuesto
   cerrojo demo      la demo completa en seis actos, para grabar el video
                     (--rapido: sin modelo, planner determinista · --sin-red: sin cadena)
 
@@ -35,6 +40,12 @@ Opciones de run:
   --demo                  agrega el panel de mainnet en solo lectura
   --reset-dia             pone a cero el acumulado diario antes de correr
   --json                  imprime el recibo.json en vez del markdown
+
+Opciones de vales:
+  cerrojo vales [--todos] [--json]        pendientes; --todos incluye los cerrados
+  cerrojo aprobar <id>                    revalida contra las politicas, dry-run
+  cerrojo aprobar <id> --live --confirmo  ejecuta de verdad
+  cerrojo rechazar <id> [--motivo "<t>"]  descarta sin ejecutar
 
 Opciones de paridad:
   --demostrar-fuga        entrega ademas UNA linea denegada a la CLI, en dry-run,
@@ -66,6 +77,9 @@ try {
     case 'doctor': await cmdDoctor(); break
     case 'serve': await cmdServe(); break
     case 'paridad': await cmdParidad(); break
+    case 'vales': await cmdVales(); break
+    case 'aprobar': await cmdAprobar(); break
+    case 'rechazar': await cmdRechazar(); break
     case 'demo': await correrDemo({ cfg, sinRed: bandera('sin-red'), rapido: bandera('rapido') }); break
     default: console.log(AYUDA)
   }
@@ -203,6 +217,124 @@ async function cmdPolicy () {
   console.log(`\n  Destinatarios permitidos: ${allowlist.length}`)
   console.log(`  Acumulado de hoy: ${formatearMonto(ledger.gastado, cfg.token.decimals)} / ${formatearMonto(cfg.capDay, cfg.token.decimals)} ${cfg.token.symbol}`)
   console.log('\n  Toda operacion de escritura que no sea `transfer` esta denegada por defecto (default-deny del motor de WDK).\n')
+}
+
+/* ── Vouchers: the human step between an agent's proposal and a signature ────
+ *
+ * Approving exists here and only here. The MCP server can create a voucher; it
+ * has no tool that approves one. That is why this command is typed by a person,
+ * and why the policy engine gets the last word again on the way through.
+ */
+
+function abrirVales () {
+  return new Vales({ dir: cfg.dirEstado })
+}
+
+function montoDeVale (v) {
+  return `${formatearMonto(BigInt(v.orden.amount), cfg.token.decimals)} ${cfg.token.symbol}`
+}
+
+async function cmdVales () {
+  const vales = abrirVales()
+  const lista = bandera('todos') ? vales.listar() : vales.pendientes()
+
+  if (bandera('json')) {
+    console.log(JSON.stringify(lista, null, 2))
+    return
+  }
+
+  if (lista.length === 0) {
+    console.log(`\n  No hay vales ${bandera('todos') ? '' : 'pendientes '}en ${join(cfg.dirEstado, 'vales')}\n`)
+    return
+  }
+
+  console.log(`\n  ${lista.length} vale(s) · ${cfg.network} · aprobar es un acto humano, no una herramienta del agente\n`)
+  for (const v of lista) {
+    console.log(`  ${v.id}`)
+    console.log(`      ${v.estado.toUpperCase().padEnd(10)} ${montoDeVale(v).padStart(14)}  →  ${v.orden.recipient}`)
+    if (v.motivo) console.log(`      motivo: ${v.motivo}`)
+    console.log(`      expira: ${v.expira}`)
+    if (v.resuelto?.policy) console.log(`      denegado al aprobar: ${v.resuelto.policy.rule} · ${v.resuelto.policy.reason}`)
+    console.log('')
+  }
+  console.log(`  Para aprobar uno:  node src/cli.js aprobar <id>\n`)
+}
+
+async function cmdAprobar () {
+  const id = args[1]
+  if (!id || id.startsWith('--')) {
+    console.error('\n⛔ Falta el id del vale.  Uso: cerrojo aprobar <id> [--live --confirmo]\n')
+    process.exit(1)
+  }
+
+  const enVivo = bandera('live') && bandera('confirmo')
+  if (bandera('live') && !bandera('confirmo')) {
+    console.error('\n⛔ --live exige tambien --confirmo. Sin las dos, la aprobacion se ejecuta en dry-run.\n')
+    process.exit(1)
+  }
+
+  const vales = abrirVales()
+  const previo = vales.leer(id)
+  if (!previo) {
+    console.error(`\n⛔ No existe el vale ${id}. Mira los pendientes con: cerrojo vales\n`)
+    process.exit(1)
+  }
+
+  console.log(`\n  Vale       ${previo.id}`)
+  console.log(`  Pago       ${montoDeVale(previo)}  →  ${previo.orden.recipient}`)
+  if (previo.motivo) console.log(`  Motivo     ${previo.motivo}`)
+  console.log(`  Modo       ${enVivo ? 'LIVE — se firma y se envia' : 'dry-run'}`)
+
+  try {
+    vales.aprobar(id)
+  } catch (err) {
+    console.error(`\n⛔ ${err.message}\n`)
+    process.exit(1)
+  }
+
+  const allowlist = cargarAllowlist(cfg.allowlistPath)
+  const ledger = new LedgerDiario({ dir: cfg.dirEstado, network: cfg.network })
+  const sesion = await abrirSesion({ seed: leerSeed(), cfg, ledger, allowlist })
+
+  try {
+    const r = await ejecutarVale({ sesion, cfg, ledger, vales, id, modo: enVivo ? 'live' : 'dry-run' })
+
+    // This is the verdict that counts, not the one the voucher arrived with.
+    console.log(`  Revalidado ${r.revalidacion ?? '—'}  (la politica decide otra vez, ahora)\n`)
+
+    if (!r.ok) {
+      console.error(`  ⛔ No se ejecuto: ${r.razon}`)
+      if (r.vale?.resuelto?.policy) {
+        console.error(`     politica ${r.vale.resuelto.policy.id} · regla ${r.vale.resuelto.policy.rule}`)
+      }
+      console.error('')
+      process.exit(1)
+    }
+
+    const v = r.vale
+    console.log(`  ✅ ${v.estado} en modo ${v.resuelto.modo}`)
+    if (v.resuelto.txHash) console.log(`     tx ${v.resuelto.txHash}`)
+    if (v.resuelto.feeEstimada) console.log(`     comision ${v.resuelto.feeEstimada} wei${v.resuelto.quoteExacto ? '' : ' (estimada)'}`)
+    console.log(`     acumulado del dia: ${formatearMonto(ledger.gastado, cfg.token.decimals)} / ${formatearMonto(cfg.capDay, cfg.token.decimals)} ${cfg.token.symbol}\n`)
+  } finally {
+    sesion.cerrar()
+  }
+}
+
+async function cmdRechazar () {
+  const id = args[1]
+  if (!id || id.startsWith('--')) {
+    console.error('\n⛔ Falta el id del vale.  Uso: cerrojo rechazar <id> [--motivo "<texto>"]\n')
+    process.exit(1)
+  }
+
+  try {
+    const v = abrirVales().rechazar(id, { motivo: valor('motivo', null) })
+    console.log(`\n  ${v.id} rechazado. No se ejecuto nada.\n`)
+  } catch (err) {
+    console.error(`\n⛔ ${err.message}\n`)
+    process.exit(1)
+  }
 }
 
 async function cmdDoctor () {

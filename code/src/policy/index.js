@@ -1,19 +1,19 @@
+// src/policy/index.js
+//
+// The WDK policies: the lock itself. Five policies, all pure conditions that
+// never touch the network, so a refusal costs nothing and works with the RPC
+// dead. Nothing here is ever switched off "just to test" — the case changes, the
+// lock does not.
+
 import { formatearMonto } from '../ingest/amount.js'
 
 /**
- * Las politicas de WDK: el cerrojo.
- *
- * Tres propiedades que no se negocian:
- *  1. Las condiciones son funciones puras. Ninguna toca la red.
- *  2. Denegar no cuesta red: se deniega aunque el RPC este muerto.
- *  3. Ninguna politica se desactiva "para probar". Se cambia el caso, no el cerrojo.
- *
- * Semantica del motor (leida de @tetherto/wdk 1.0.0-beta.16): una cuenta con
- * cualquier politica queda en **default-deny** — toda operacion de escritura sin
- * regla ALLOW que la cubra se deniega con reason `no-applicable-rule`. Por eso
- * aqui solo se permite `transfer`: `sendTransaction`, `approve`, `signTypedData`
- * y `delegate` quedan denegadas de fabrica, y con ellas los rodeos clasicos al
- * tope (calldata ERC-20 cruda, Permit, ERC-7702).
+ * Engine semantics, read out of @tetherto/wdk 1.0.0-beta.16: an account carrying
+ * any policy at all is **default-deny** — every write operation with no ALLOW
+ * rule covering it is refused with reason `no-applicable-rule`. That is why only
+ * `transfer` is allowed here: `sendTransaction`, `approve`, `signTypedData` and
+ * `delegate` are denied out of the box, and with them the classic ways around a
+ * cap (raw ERC-20 calldata, Permit, ERC-7702).
  */
 export function construirPoliticas ({ wallet, capTx, capDay, allowlist, token, ledger }) {
   const decimales = token.decimals
@@ -107,8 +107,8 @@ export function construirPoliticas ({ wallet, capTx, capDay, allowlist, token, l
 }
 
 /**
- * La red donde hay dinero de verdad. Cerrojo declarativo que acompaña al
- * estructural (`toReadOnlyAccount()`, donde el metodo de enviar no existe).
+ * The network with real money on it. A declarative lock alongside the structural
+ * one (`toReadOnlyAccount()`, where the send method does not exist).
  */
 export function politicaSoloLectura ({ wallet }) {
   return {

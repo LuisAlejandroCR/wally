@@ -1,20 +1,24 @@
+// src/paridad.js
+//
+// Parity with the official wdk CLI. It answers three questions a judge can check
+// in a minute: whether the CLI and the SDK are the same wallet, what actually
+// reaches the CLI, and whether the CLI on its own would have stopped the line
+// the lock refused. The adapter is injected so this can be tested without a chain.
+
 import { formatearMonto } from './ingest/amount.js'
 import * as adaptadorReal from './wdk/cli.js'
 
 /**
- * Paridad con la CLI de WDK.
+ * The three questions, and their answers:
  *
- * Responde tres preguntas que un juez puede verificar en un minuto:
- *
- *   1. ¿Son la misma billetera? La CLI deriva una direccion y el SDK deriva otra.
- *      Si no coinciden byte a byte, esto falla.
- *   2. ¿Que llega a la CLI? Solo las lineas que el cerrojo aprobo. Las denegadas
- *      no se le entregan: no hay ruta de codigo que lo haga.
- *   3. ¿La CLI sola habria parado la linea denegada? No. Con --demostrar-fuga se
- *      le entrega una linea denegada a proposito, en dry-run, y se ve que arma el
- *      calldata igual. La CLI no tiene tope ni allowlist; el cerrojo si.
- *
- * El adaptador se inyecta para poder probar esta orquestacion sin red ni llavero.
+ *   1. Same wallet? The CLI derives one address and the SDK derives another. If
+ *      they do not match byte for byte, this fails.
+ *   2. What reaches the CLI? Only the lines the lock approved. Denied ones are
+ *      not handed over: there is no code path that does it.
+ *   3. Would the CLI alone have stopped the denied line? No. With
+ *      --demostrar-fuga one denied line is handed to it on purpose, in dry-run,
+ *      and it builds the calldata all the same. The CLI has no cap and no
+ *      allowlist; the lock has both.
  */
 export async function correrParidad ({
   cfg,
@@ -45,7 +49,7 @@ export async function correrParidad ({
     }
 
     if (linea.estado !== 'ejecutada') {
-      // No se le entrega. Esta rama no llama al adaptador, y un test lo afirma.
+      // Not handed over. This branch never calls the adapter, and a test asserts it.
       lineas.push({
         ...base,
         entregadaALaCli: false,
@@ -60,7 +64,7 @@ export async function correrParidad ({
     lineas.push({ ...base, entregadaALaCli: true, cli })
   }
 
-  // Demostracion opcional: la primera linea denegada, entregada a la CLI a proposito.
+  // Optional demonstration: the first denied line, handed to the CLI on purpose.
   let fuga = null
   if (demostrarFuga) {
     const denegada = recibo.lines.find((l) => l.estado === 'denegada' && l.to && l.amount)
@@ -73,8 +77,8 @@ export async function correrParidad ({
         monto: formatearMonto(BigInt(denegada.amount), cfg.token.decimals),
         reglaDelCerrojo: denegada.policy?.rule ?? null,
         razonDelCerrojo: denegada.policy?.reason ?? null,
-        // La CLI no tiene una decision de politica que reportar. Si fallo, fallo por
-        // la cadena (saldo, gas), no por un tope. Eso es justamente el punto.
+        // The CLI has no policy decision to report. If it failed, it failed against
+        // the chain (balance, gas), not against a cap. That is exactly the point.
         cliLaRefusoPorPolitica: false,
         cli
       }
@@ -102,19 +106,19 @@ export async function correrParidad ({
     },
     lineas,
     fuga,
-    // La paridad se sostiene si es la misma billetera y ninguna linea denegada
-    // llego a la CLI. Lo segundo es estructural, y se afirma igual.
+    // Parity holds if it is the same wallet and no denied line reached the CLI.
+    // The second half is structural, and asserted anyway.
     cuadra: mismaBilletera && retenidas.every((l) => l.entregadaALaCli === false)
   }
 }
 
 /**
- * Clasifica el fallo de la CLI, que es donde se juega el argumento entero.
+ * Classifies the CLI failure, which is where the whole argument is decided.
  *
- * La CLI no tiene un "DENY". Cuando falla, falla contra la cadena — saldo, gas,
- * un reverso del contrato — y eso NO es un control: depende de cuanto haya en la
- * cuenta ese dia. Confundir un reverso por saldo con una denegacion por politica
- * seria justamente el error que este proyecto existe para señalar.
+ * The CLI has no "DENY". When it fails, it fails against the chain — balance,
+ * gas, a contract revert — and that is NOT a control: it depends on how much is
+ * in the account that day. Mistaking a balance revert for a policy denial would
+ * be precisely the error this project exists to point at.
  */
 export function clasificarCli (cli) {
   if (!cli) return { clase: 'no-entregada', etiqueta: '—' }
