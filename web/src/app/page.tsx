@@ -2,6 +2,7 @@ import Link from 'next/link'
 import clean from '@/data/run-clean.json'
 import type { Receipt } from '@/lib/cerrojo'
 import { LockFlow } from '@/components/LockFlow'
+import { Explainer } from '@/components/Explainer'
 import { Amount } from '@/components/Receipt'
 import { Reveal } from '@/components/Reveal'
 
@@ -132,7 +133,12 @@ export default function Home () {
         </div>
 
         <div className="pt-4">
-          <LockFlow verdict="approved" />
+          <Explainer
+            approved={t.ejecutadas}
+            blocked={t.denegadas}
+            notAttempted={t.no_intentadas}
+            lines={t.lineas}
+          />
         </div>
       </section>
 
