@@ -4,7 +4,13 @@
    body text 14.9:1, muted text 5.5:1 on the page and 5.0:1 on the raised
    surface, each status colour ≥ 4.5:1 against its own tint, and the control
    border 3.3:1 for the non-text 3:1 rule. Nothing here relies on colour alone —
-   every verdict also carries an icon and a word. */
+   every verdict also carries an icon and a word.
+
+   The display layer added later was measured the same way: navy on cream
+   13.4:1, navy on the raised surface 14.2:1, navy on gold 6.7:1 (so a gold
+   button carries navy text, never cream), and gold ink on its own tint 5.3:1.
+   Gold on cream is 2.0:1, which is why gold is only ever a fill, a border or a
+   rule — never a letter. */
 
 :root {
   --background: #faf6ef;
@@ -23,6 +29,17 @@
   --amber-bg: #faf0d9;
   --blue: #1b5fbf;
   --on-blue: #fffdf8;
+
+  /* Display layer: navy for headings and dark fills, gold for accents. */
+  --navy: #12294f;
+  --gold: #e9a23b;
+  --gold-2: #f2bc6d;
+  --gold-bg: #fbf0dc;
+  --gold-ink: #8a5a00;
+
+  --shadow-soft: 0 18px 44px -22px rgba(18, 41, 79, .28);
+  --shadow-card: 0 30px 70px -30px rgba(18, 41, 79, .4);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
 }
 
 @theme inline {
@@ -41,8 +58,14 @@
   --color-amber-bg: var(--amber-bg);
   --color-blue: var(--blue);
   --color-on-blue: var(--on-blue);
+  --color-navy: var(--navy);
+  --color-gold: var(--gold);
+  --color-gold-2: var(--gold-2);
+  --color-gold-bg: var(--gold-bg);
+  --color-gold-ink: var(--gold-ink);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
 }
 
 body {
@@ -50,6 +73,80 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Headings carry the display face everywhere, so a new page inherits the
+   typography instead of having to remember it. The serif is progressive
+   enhancement: with the font blocked, Georgia takes the same slot. */
+h1,
+h2,
+.display {
+  font-family: var(--font-display), Georgia, 'Times New Roman', serif;
+  letter-spacing: -0.025em;
+  color: var(--navy);
+}
+
+h1 em,
+h2 em,
+.display em {
+  font-style: italic;
+  background: linear-gradient(118deg, var(--gold) 0%, #d97706 58%, #b45309 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Atmosphere: two blurred washes and a dot grid, behind everything. Decorative
+   only — it carries no information and is hidden from assistive tech. */
+.atmos {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.atmos-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(95px);
+}
+
+.atmos-a {
+  width: 580px;
+  height: 580px;
+  top: -240px;
+  right: -170px;
+  background: rgba(233, 162, 59, .3);
+}
+
+.atmos-b {
+  width: 560px;
+  height: 560px;
+  top: 320px;
+  left: -220px;
+  background: rgba(31, 122, 76, .12);
+}
+
+.atmos-grid {
+  position: absolute;
+  inset: 0;
+  opacity: .55;
+  background-image: radial-gradient(rgba(18, 41, 79, .13) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(76% 46% at 50% 10%, #000 24%, transparent 78%);
+  -webkit-mask-image: radial-gradient(76% 46% at 50% 10%, #000 24%, transparent 78%);
+}
+
+/* Cards that lift on hover. One class so no component invents its own easing. */
+.rise {
+  box-shadow: var(--shadow-soft);
+  transition: transform .35s var(--ease-out), box-shadow .35s ease, border-color .35s ease;
+}
+
+.rise:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card);
 }
 
 ::selection {
