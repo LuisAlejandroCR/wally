@@ -6,6 +6,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
 import { RAIZ } from '../src/config.js'
+import { entorno } from './semilla.js'
 
 let cliente
 
@@ -15,7 +16,7 @@ before(async () => {
     command: process.execPath,
     args: [join(RAIZ, 'src', 'mcp', 'server.js')],
     cwd: RAIZ,
-    env: { ...process.env, CERROJO_STATE_DIR: join(RAIZ, 'state', 'tests-mcp') }
+    env: entorno('tests-mcp')
   })
   cliente = new Client({ name: 'cerrojo-tests', version: '1.0.0' })
   await cliente.connect(transporte)
