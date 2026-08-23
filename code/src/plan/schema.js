@@ -10,12 +10,16 @@ export const EsquemaLineaPlan = z.object({
   decimals: z.number().int().nonnegative(),
   token: z.string().min(1),
   network: z.string().min(1),
-  reason: z.string().min(1)
+  // `reason` es del planner (por que propone esta fila). `concepto` es el texto
+  // del CSV, tal cual: es DATO, y tiene que llegar al recibo aunque venga envenenado.
+  reason: z.string().min(1),
+  concepto: z.string().optional()
 })
 
 export const EsquemaAbstencion = z.object({
   row: z.number().int().positive(),
-  why: z.string().min(1)
+  why: z.string().min(1),
+  concepto: z.string().optional()
 })
 
 export const EsquemaPlan = z.object({

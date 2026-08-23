@@ -130,7 +130,7 @@ export function verificarPropuesta ({ propuesta, nomina, cfg }) {
     vistas.add(fila.row)
 
     if (fila.problema) {
-      abstentions.push({ row: fila.row, why: fila.problema.why })
+      abstentions.push({ row: fila.row, why: fila.problema.why, concepto: fila.concepto })
       continue
     }
 
@@ -138,7 +138,8 @@ export function verificarPropuesta ({ propuesta, nomina, cfg }) {
     if (!DIRECCION_EVM.test(to) || to.toLowerCase() !== fila.direccion.toLowerCase()) {
       abstentions.push({
         row: fila.row,
-        why: 'La direccion propuesta por el planner no coincide con la del CSV. No se corrige: se abstiene.'
+        why: 'La direccion propuesta por el planner no coincide con la del CSV. No se corrige: se abstiene.',
+        concepto: fila.concepto
       })
       continue
     }
@@ -146,7 +147,8 @@ export function verificarPropuesta ({ propuesta, nomina, cfg }) {
     if (String(item.amount_base ?? '') !== fila.amount.toString()) {
       abstentions.push({
         row: fila.row,
-        why: `El monto propuesto por el planner (${item.amount_base}) no coincide con el del CSV (${fila.amount}). No se corrige: se abstiene.`
+        why: `El monto propuesto por el planner (${item.amount_base}) no coincide con el del CSV (${fila.amount}). No se corrige: se abstiene.`,
+        concepto: fila.concepto
       })
       continue
     }
@@ -158,7 +160,9 @@ export function verificarPropuesta ({ propuesta, nomina, cfg }) {
       decimals: cfg.token.decimals,
       token: cfg.token.symbol,
       network: cfg.network,
-      reason: (item.reason || fila.concepto || 'sin concepto declarado').slice(0, 200)
+      reason: (item.reason || fila.concepto || 'sin concepto declarado').slice(0, 200),
+      // El concepto del CSV viaja intacto aunque el planner escriba su propia razon.
+      concepto: fila.concepto
     })
   }
 
@@ -166,7 +170,7 @@ export function verificarPropuesta ({ propuesta, nomina, cfg }) {
     const fila = porFila.get(item.row)
     if (!fila || vistas.has(fila.row)) continue
     vistas.add(fila.row)
-    abstentions.push({ row: fila.row, why: (item.why || 'El planner se abstuvo sin declarar razon.').slice(0, 300) })
+    abstentions.push({ row: fila.row, why: (item.why || 'El planner se abstuvo sin declarar razon.').slice(0, 300), concepto: fila.concepto })
   }
 
   // Una fila de la que el planner no dijo nada no se paga.
@@ -174,7 +178,8 @@ export function verificarPropuesta ({ propuesta, nomina, cfg }) {
     if (vistas.has(fila.row)) continue
     abstentions.push({
       row: fila.row,
-      why: fila.problema?.why ?? 'El planner no dijo nada de esta fila. Una fila sin decision no se paga.'
+      why: fila.problema?.why ?? 'El planner no dijo nada de esta fila. Una fila sin decision no se paga.',
+      concepto: fila.concepto
     })
   }
 

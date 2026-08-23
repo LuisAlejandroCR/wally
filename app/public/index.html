@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cerrojo — nomina con politicas</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header class="barra">
+  <div class="marca">
+    <span class="marca-nombre">Cerrojo</span>
+    <span class="marca-lema">El agente propone. El cerrojo decide.</span>
+  </div>
+  <div class="barra-datos" id="barra-datos">
+    <span class="dato dato-cargando" id="dato-salud">conectando con el motor…</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- 1. CARGAR -->
+  <section class="pantalla activa" id="pantalla-cargar">
+    <ol class="pasos" data-paso="1"></ol>
+
+    <h1>Preparar la corrida</h1>
+    <p class="entradilla">
+      Elige el archivo de nomina y escribe la instruccion. El motor arma un plan y lo pasa por las
+      politicas antes de mover un solo peso.
+    </p>
+
+    <h2>1 · Archivo de nomina</h2>
+    <div class="opciones" id="opciones-nomina"></div>
+
+    <h2>2 · Instruccion</h2>
+    <input class="instruccion" id="campo-instruccion" type="text"
+           value="paga la nomina de agosto" autocomplete="off" spellcheck="false">
+
+    <label class="casilla">
+      <input type="checkbox" id="campo-reiniciar" checked>
+      <span>
+        Reiniciar el acumulado del dia antes de correr
+        <small>Equivale a <code>cerrojo run --reset-dia</code>. El tope diario se sigue aplicando entero dentro de la corrida.</small>
+      </span>
+    </label>
+
+    <div class="acciones">
+      <button class="boton boton-primario" id="boton-correr">Armar el plan</button>
+      <button class="boton boton-secundario" id="boton-comparar">Comparar limpia contra envenenada</button>
+    </div>
+
+    <p class="error" id="error-cargar" hidden></p>
+
+    <details class="probador">
+      <summary>Probador de politica — una sola linea</summary>
+      <p class="entradilla">
+        Consulta directa al motor: <code>POST /simular</code>. No envia nada, solo pregunta.
+      </p>
+      <div class="probador-campos">
+        <label>Destinatario
+          <input id="campo-destinatario" type="text" spellcheck="false"
+                 value="0x000000000000000000000000000000000000dEaD">
+        </label>
+        <label>Monto en USDT
+          <input id="campo-monto" type="text" spellcheck="false" value="400">
+        </label>
+        <button class="boton boton-secundario" id="boton-simular">Preguntar al cerrojo</button>
+      </div>
+      <div id="salida-simular"></div>
+    </details>
+
+    <section class="politicas" id="panel-politicas" hidden>
+      <h2>Politicas activas</h2>
+      <div class="topes" id="topes"></div>
+      <table class="tabla tabla-politicas">
+        <thead><tr><th>Politica</th><th>Regla</th><th>Accion</th><th>Razon que viaja al recibo</th></tr></thead>
+        <tbody id="cuerpo-politicas"></tbody>
+      </table>
+    </section>
+  </section>
+
+  <!-- 2. PLAN -->
+  <section class="pantalla" id="pantalla-plan">
+    <ol class="pasos" data-paso="2"></ol>
+
+    <h1>Lo que propuso el planner</h1>
+    <p class="entradilla" id="resumen-plan"></p>
+
+    <div class="aviso aviso-neutro">
+      Todavia no hay ninguna decision en esta pantalla. El concepto se muestra tal como venia en el
+      archivo: es dato, no una instruccion.
+    </div>
+
+    <table class="tabla tabla-plan">
+      <thead><tr><th class="col-num">#</th><th>Destinatario</th><th class="col-monto">Monto</th><th>Concepto (texto del archivo)</th></tr></thead>
+      <tbody id="cuerpo-plan"></tbody>
+    </table>
+
+    <section id="bloque-abstenciones" hidden>
+      <h2>Filas que el planner no propuso</h2>
+      <p class="entradilla">
+        Abstenerse es un resultado valido: falta un dato y no se inventa un valor plausible.
+      </p>
+      <table class="tabla tabla-abstenciones">
+        <thead><tr><th class="col-num">#</th><th>Por que no se propuso</th></tr></thead>
+        <tbody id="cuerpo-abstenciones"></tbody>
+      </table>
+    </section>
+
+    <div class="acciones">
+      <button class="boton boton-primario" id="boton-veredicto">Pasar por el cerrojo</button>
+      <button class="boton boton-terciario" data-ir="pantalla-cargar">Volver</button>
+    </div>
+  </section>
+
+  <!-- 3. VEREDICTO -->
+  <section class="pantalla" id="pantalla-veredicto">
+    <ol class="pasos" data-paso="3"></ol>
+
+    <h1>El veredicto de las politicas</h1>
+
+    <div class="contadores" id="contadores"></div>
+    <div class="cuadratura" id="cuadratura"></div>
+
+    <table class="tabla tabla-veredicto">
+      <thead><tr><th class="col-num">#</th><th class="col-estado">Estado</th><th>Destinatario</th><th class="col-monto">Monto</th><th>Por que</th></tr></thead>
+      <tbody id="cuerpo-veredicto"></tbody>
+    </table>
+
+    <div class="acciones">
+      <button class="boton boton-primario" id="boton-recibo">Ver el recibo</button>
+      <button class="boton boton-terciario" data-ir="pantalla-plan">Volver al plan</button>
+    </div>
+  </section>
+
+  <!-- 4. RECIBO -->
+  <section class="pantalla" id="pantalla-recibo">
+    <ol class="pasos" data-paso="4"></ol>
+
+    <h1>Recibo de la corrida</h1>
+
+    <dl class="ficha" id="ficha-recibo"></dl>
+
+    <div class="recibo-md" id="recibo-md"></div>
+
+    <h2>Chequeos deterministas</h2>
+    <div class="chequeos" id="chequeos"></div>
+
+    <h2>Politicas aplicadas</h2>
+    <table class="tabla">
+      <thead><tr><th>Politica</th><th>Alcance</th><th>Estado al cerrar</th></tr></thead>
+      <tbody id="cuerpo-aplicadas"></tbody>
+    </table>
+
+    <div class="acciones">
+      <button class="boton boton-secundario" id="boton-descargar">Descargar recibo.json</button>
+      <button class="boton boton-terciario" data-ir="pantalla-cargar">Nueva corrida</button>
+    </div>
+  </section>
+
+  <!-- COMPARACION -->
+  <section class="pantalla" id="pantalla-comparar">
+    <ol class="pasos" data-paso="0"></ol>
+
+    <h1>Limpia contra envenenada</h1>
+    <p class="entradilla">
+      Dos corridas reales, cada una desde el mismo acumulado diario en cero. El unico cambio entre
+      los dos archivos es el texto de la columna concepto.
+    </p>
+
+    <div id="banner-comparar"></div>
+
+    <table class="tabla tabla-comparar">
+      <thead>
+        <tr>
+          <th class="col-num">#</th>
+          <th>Nomina limpia</th>
+          <th>Nomina envenenada</th>
+          <th class="col-igual">Mismo veredicto</th>
+        </tr>
+      </thead>
+      <tbody id="cuerpo-comparar"></tbody>
+    </table>
+
+    <section id="bloque-inyeccion" hidden>
+      <h2>El texto inyectado, tal como llego al recibo</h2>
+      <p class="entradilla">
+        Viajo por todo el sistema como dato. No cambio ningun veredicto.
+      </p>
+      <div id="lista-inyeccion"></div>
+    </section>
+
+    <div class="acciones">
+      <button class="boton boton-terciario" data-ir="pantalla-cargar">Volver</button>
+    </div>
+  </section>
+
+</main>
+
+<div class="cargando" id="cargando" hidden>
+  <div class="cargando-caja">
+    <div class="cargando-barra"><span></span></div>
+    <p id="cargando-texto">Consultando al motor…</p>
+  </div>
+</div>
+
+<footer class="pie">
+  Ningun veredicto de esta pantalla lo calcula el navegador. Todos vienen de la API de Cerrojo,
+  que consulta el motor de politicas de WDK. Esta app no puede enviar fondos: no existe un endpoint
+  que ejecute en vivo.
+</footer>
+
+<script src="/app.js" type="module"></script>
+</body>
+</html>

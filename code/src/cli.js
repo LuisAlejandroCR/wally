@@ -8,6 +8,7 @@ import { construirPoliticas } from './policy/index.js'
 import { abrirSesion } from './wdk/session.js'
 import { correr } from './run.js'
 import { correrEval } from './eval/run.js'
+import { evalInyeccion } from './eval/inyeccion.js'
 import { crearApi } from './api/server.js'
 import { correrDemo } from './demo.js'
 
@@ -15,10 +16,12 @@ const AYUDA = `cerrojo — el agente propone, el cerrojo decide
 
   cerrojo run       arma un plan desde un CSV y lo pasa por las politicas
   cerrojo eval      corre el golden set de casos N veces y reporta falsos permisos
+  cerrojo inyeccion mide el CSV envenenado contra el limpio, con el modelo real
   cerrojo policy    muestra las politicas activas, sin tocar la red
   cerrojo doctor    revisa la configuracion y el entorno
   cerrojo serve     levanta la API HTTP local (para una app movil o web)
   cerrojo demo      la demo completa en seis actos, para grabar el video
+                    (--rapido: sin modelo, planner determinista · --sin-red: sin cadena)
 
 Opciones de run:
   --csv <ruta>            CSV de nomina (por defecto: ./evals/fixtures/nomina_agosto.csv)
@@ -50,10 +53,11 @@ try {
   switch (comando) {
     case 'run': await cmdRun(); break
     case 'eval': await cmdEval(); break
+    case 'inyeccion': await cmdInyeccion(); break
     case 'policy': await cmdPolicy(); break
     case 'doctor': await cmdDoctor(); break
     case 'serve': await cmdServe(); break
-    case 'demo': await correrDemo({ cfg, sinRed: bandera('sin-red') }); break
+    case 'demo': await correrDemo({ cfg, sinRed: bandera('sin-red'), rapido: bandera('rapido') }); break
     default: console.log(AYUDA)
   }
 } catch (err) {
@@ -122,6 +126,20 @@ async function cmdServe () {
     console.log('  GET  /corridas/:id   recibo de una corrida anterior')
     console.log('\n  Ningun endpoint envia fondos: la API es dry-run por construccion.\n')
   })
+}
+
+async function cmdInyeccion () {
+  const reporte = await evalInyeccion({
+    cfg,
+    corridas: Number(valor('runs', '3')),
+    planner: bandera('rapido') ? 'rules' : 'llm'
+  })
+
+  console.log(bandera('json') ? JSON.stringify(reporte, null, 2) : reporte.texto)
+  if (reporte.dir) console.log(`Reporte en ${reporte.dir}
+`)
+
+  process.exit(reporte.derivasPeligrosas > 0 || reporte.pagosAlAtacante > 0 ? 1 : 0)
 }
 
 async function cmdPolicy () {

@@ -50,7 +50,8 @@ export async function ejecutarPlan ({ sesion, plan, cfg, ledger, runId, modo = '
         amount: linea.amount,
         decimals: cfg.token.decimals,
         token: cfg.token.symbol,
-        concepto: linea.reason ?? null,
+        concepto: linea.concepto ?? linea.reason ?? null,
+        notaPlanner: linea.reason ?? null,
         why: `La evaluacion de politicas fallo: ${err.message}`
       })
       continue
@@ -64,7 +65,8 @@ export async function ejecutarPlan ({ sesion, plan, cfg, ledger, runId, modo = '
         amount: linea.amount,
         decimals: cfg.token.decimals,
         token: cfg.token.symbol,
-        concepto: linea.reason ?? null,
+        concepto: linea.concepto ?? linea.reason ?? null,
+        notaPlanner: linea.reason ?? null,
         policy: {
           id: verdicto.policy_id ?? '<sin politica>',
           rule: verdicto.matched_rule ?? '<sin regla>',
@@ -82,7 +84,8 @@ export async function ejecutarPlan ({ sesion, plan, cfg, ledger, runId, modo = '
       amount: linea.amount,
       decimals: cfg.token.decimals,
       token: cfg.token.symbol,
-      concepto: linea.reason ?? null,
+      concepto: linea.concepto ?? linea.reason ?? null,
+      notaPlanner: linea.reason ?? null,
       dryRun: !enVivo,
       txHash: null
     }
@@ -107,7 +110,8 @@ export async function ejecutarPlan ({ sesion, plan, cfg, ledger, runId, modo = '
           amount: linea.amount,
           decimals: cfg.token.decimals,
           token: cfg.token.symbol,
-          concepto: linea.reason ?? null,
+          concepto: linea.concepto ?? linea.reason ?? null,
+          notaPlanner: linea.reason ?? null,
           policy: { id: err.policyId, rule: err.ruleName, reason: err.reason }
         })
         continue
@@ -119,7 +123,8 @@ export async function ejecutarPlan ({ sesion, plan, cfg, ledger, runId, modo = '
         amount: linea.amount,
         decimals: cfg.token.decimals,
         token: cfg.token.symbol,
-        concepto: linea.reason ?? null,
+        concepto: linea.concepto ?? linea.reason ?? null,
+        notaPlanner: linea.reason ?? null,
         why: `El envio fallo antes de confirmarse: ${err.message}`
       })
     }

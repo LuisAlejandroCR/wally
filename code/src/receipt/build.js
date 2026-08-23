@@ -33,6 +33,7 @@ export function construirRecibo ({
       amount: null,
       decimals: cfg.token.decimals,
       token: cfg.token.symbol,
+      concepto: a.concepto ?? null,
       why: a.why
     }))
   ].sort((a, b) => a.row - b.row)

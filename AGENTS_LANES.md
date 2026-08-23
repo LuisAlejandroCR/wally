@@ -1,63 +1,67 @@
-# Carriles de trabajo — varios agentes sobre este repo
+# Working lanes — several agents on one repository
 
-> Este archivo existe porque el repo lo tocan **varios agentes a la vez**. Cada carril tiene
-> dueño, frontera y criterio de "hecho". Un agente que trabaja fuera de su carril rompe el de otro.
+> This file exists because more than one agent works on this repository at the same time. Each lane
+> has an owner, a boundary, and a definition of done. An agent working outside its lane breaks
+> someone else's.
 >
-> La constitución del proyecto (`AGENTS.md`) y la guía de sesión (`CLAUDE.md`) son privadas y
-> **no** están en este repo público. Este archivo sí, porque coordina.
+> The project constitution (`AGENTS.md`) and the session guide (`CLAUDE.md`) are private and are not
+> in this public repository. This file is, because coordination has to be readable by everyone.
 
-## Regla de oro
+## The rule everything else follows
 
-**El cerrojo vive en `code/src/policy/` y en el motor de políticas de `@tetherto/wdk`.**
-Ninguna interfaz —CLI, MCP, HTTP, móvil— decide si un pago pasa. Todas preguntan.
+**The lock lives in `code/src/policy/` and in the `@tetherto/wdk` policy engine.**
+No interface — CLI, MCP, HTTP, mobile — decides whether a payment goes through. They all ask.
 
-Una denegación que no venga de un veredicto real del motor (`account.simulate.transfer(...)` →
-`{ decision, policy_id, matched_rule, reason }`) es un cerrojo falso y no se acepta en este repo,
-por bonita que se vea en pantalla.
+A denial that does not come from a real engine verdict (`account.simulate.transfer(...)` →
+`{ decision, policy_id, matched_rule, reason }`) is a fake lock. It is not accepted here, however
+good it looks on screen.
 
-## Carriles
+## Lanes
 
-| Carril | Dueño | Directorios | Estado |
+| Lane | Owner | Directories | State |
 |---|---|---|---|
-| **A · Motor** | agente del núcleo | `code/src/{ingest,plan,policy,wdk,execute,receipt,eval}`, `code/tests`, `code/evals` | ✅ funcionando, 38/38 tests, eval 20/20, falsos permisos 0 |
-| **B · Interfaces** | agente del núcleo | `code/src/cli.js`, `code/src/mcp/`, `code/src/api/` | ✅ CLI + MCP + HTTP |
-| **C · App** | agente de RN/web | `app/` (aún no existe) | ⏳ P2, solo si A y B están congelados |
-| **D · Entrega** | humano | `README.md`, video, DoraHacks | ⏳ |
+| **A · Engine** | core agent | `code/src/{ingest,plan,policy,wdk,execute,receipt,eval}`, `code/tests`, `code/evals` | ✅ working — 38/38 tests, eval 20/20, false permits 0 |
+| **B · Interfaces** | core agent | `code/src/cli.js`, `code/src/mcp/`, `code/src/api/`, `code/src/demo.js` | ✅ CLI + MCP + HTTP + `cerrojo demo` |
+| **C · App** | RN/web agent | `app/` | ⏳ P2 — only once A and B are frozen |
+| **D · Delivery** | human | `README.md`, video, DoraHacks submission | ⏳ |
 
-### Frontera dura entre A/B y C
+### The hard boundary between A/B and C
 
-El carril C **no importa `@tetherto/wdk`**, no deriva cuentas y no evalúa políticas.
-Consume la API HTTP del carril B. Motivo, medido en `docs/hallazgos_rn_wdk.md`: el camino React
-Native (`pear-wrk-wdk`) construye `new WDK(seed)` sin opciones y **no expone `registerPolicy`**,
-así que una app que decidiera por su cuenta tendría que *simular* las denegaciones. Eso está
-prohibido. Con la API HTTP, el teléfono es una pantalla y el veredicto sigue siendo del motor.
+Lane C **does not import `@tetherto/wdk`**, does not derive accounts, and does not evaluate
+policies. It consumes lane B's HTTP API.
 
-## El contrato — API HTTP de Cerrojo
+The reason is measured, not aesthetic: WDK's React Native worklet (`pear-wrk-wdk`) builds
+`new WDK(seed)` with a single argument and never exposes `registerPolicy`, so an app deciding on its
+own would have to *simulate* the denials. That is forbidden here. With the HTTP API, the phone is a
+screen and the verdict still comes from the engine.
+
+## The contract — Cerrojo's HTTP API
 
 ```bash
 cd code && node src/cli.js serve          # http://127.0.0.1:8787
 ```
 
-| Método | Ruta | Cuerpo | Devuelve |
+| Method | Path | Body | Returns |
 |---|---|---|---|
-| GET | `/salud` | — | servicio, red, token, `modo: "dry-run"` |
-| GET | `/politicas` | — | topes, allowlist (solo el conteo), reglas con su razón |
-| GET | `/estado-diario` | — | gastado / tope / restante del día, en base y legible |
+| GET | `/salud` | — | service, network, token, `modo: "dry-run"` |
+| GET | `/politicas` | — | caps, how many recipients are allowed, rules with their reason |
+| GET | `/estado-diario` | — | spent / cap / remaining for the day, in base units and readable |
 | POST | `/simular` | `{ destinatario, monto_base, token? }` | `{ decision: "ALLOW"\|"DENY", politica, regla, razon, traza }` |
 | POST | `/correr` | `{ csv?, instruccion?, planner?, demo? }` | `{ recibo, markdown }` |
-| GET | `/corridas/:runId` | — | el `recibo.json` de una corrida anterior |
+| GET | `/corridas/:runId` | — | the `recibo.json` of an earlier run |
 
-Propiedades del contrato, que el carril C puede dar por ciertas:
+Properties lane C can build on:
 
-1. **Ningún endpoint envía fondos.** No existe uno. `--live` solo existe en el CLI y exige dos
-   banderas explícitas.
-2. Los montos viajan como **enteros en unidades base, en string**. Nunca floats.
-3. Toda denegación trae `politica`, `regla` y `razon` — es lo que se pinta en pantalla.
-4. Los errores son `{ error: { code, message, suggestion } }`. Nunca una traza.
-5. La API escucha en `127.0.0.1`. Para probar desde un teléfono en la misma red:
-   `CERROJO_API_HOST=0.0.0.0`, y solo en una red de confianza.
+1. **No endpoint sends funds.** None exists. `--live` lives only in the CLI and needs two explicit
+   flags together.
+2. Amounts travel as **base-unit integers, as strings**. Never floats.
+3. Every denial carries `politica`, `regla` and `razon` — that is what the screen renders.
+4. Errors are `{ error: { code, message, suggestion } }`, always with a suggested fix, never a stack
+   trace. Bad input is a typed 400, not a 500.
+5. The API listens on `127.0.0.1`. To reach it from a phone on the same network, start it with
+   `CERROJO_API_HOST=0.0.0.0`, and only on a network you trust.
 
-Ejemplo, tal cual responde hoy:
+Exactly as it answers today:
 
 ```bash
 curl -s -X POST -H 'content-type: application/json' \
@@ -74,25 +78,30 @@ curl -s -X POST -H 'content-type: application/json' \
 }
 ```
 
-## Antes de cada commit, cualquier carril
+The receipt is the other half of the contract: every line ends in exactly one of `ejecutada`,
+`denegada`, `no_intentada`, and the three sum to the total or no ordinary receipt is issued.
+
+## Before every commit, in every lane
 
 ```bash
 cd code && npm test && node src/cli.js eval --runs 5
 ```
 
-* `npm test` tiene que quedar en verde entero.
-* `cerrojo eval` tiene que reportar **falsos permisos: 0**. Ese número manda sobre cualquier otro.
-* Nada de `git push --force` sobre `main`. Commits pequeños, mensaje que diga qué carril toca.
-* **Nada de `git reset` sobre un commit que no hiciste tú.** Ya pasó una vez hoy: un carril reseteó
-  el commit de otro que estaba en curso. No se perdió nada porque el trabajo seguía en disco, pero
-  la próxima vez sí se pierde. Si necesitas deshacer algo de otro carril, escribe un commit encima.
+* `npm test` has to be green in full.
+* `cerrojo eval` has to report **false permits: 0**. That number outranks every other number here.
+* If you touched anything the model reads or writes, also run `node src/cli.js inyeccion --runs 3`
+  and check that dangerous drift is 0. It costs API calls, so it is not part of the default loop.
+* No `git push --force` on `main`. Small commits, and say in the message which lane you are in.
+* **Do not `git reset` a commit you did not make.** It happened once already: one lane reset
+  another lane's in-flight commit. Nothing was lost because the work was still on disk; next time it
+  would be. To undo someone else's work, commit on top of it.
 
-## Lo que ningún agente hace en este repo
+## What no agent does in this repository
 
-| Prohibido | Por qué |
+| Forbidden | Why |
 |---|---|
-| Bajar un tope, apagar una política o añadir una excepción "para probar" | Se cambia el caso de prueba, no el cerrojo |
-| Pintar una denegación calculada en la UI | Es un cerrojo falso; la pista lo castiga |
-| Commitear `.env`, una seed, una llave o el contenido de `code/data/` | Está en `.gitignore` y es motivo de descalificación |
-| Ejecutar en mainnet | La red de escritura es Sepolia. Mainnet solo se lee |
-| Tocar `code/src/policy/` sin correr el eval en el mismo commit | Es la capa que decide dinero |
+| Lowering a cap, disabling a policy, or adding an exception "just to test" | Change the test case, never the lock |
+| Rendering a denial computed in the UI | That is a fake lock, and the track penalizes exactly that |
+| Committing `.env`, a seed, a key, or the contents of `code/data/` | It is in `.gitignore`, and it is grounds for disqualification |
+| Executing on mainnet | The network that writes is Sepolia. Mainnet is read-only |
+| Touching `code/src/policy/` without running the eval in the same commit | It is the layer that decides money |

@@ -13,7 +13,7 @@ export function planificarPorReglas ({ instruccion, nomina, cfg, periodo }) {
 
   for (const linea of nomina.lineas) {
     if (linea.problema) {
-      abstentions.push({ row: linea.row, why: linea.problema.why })
+      abstentions.push({ row: linea.row, why: linea.problema.why, concepto: linea.concepto })
       continue
     }
 
@@ -24,7 +24,8 @@ export function planificarPorReglas ({ instruccion, nomina, cfg, periodo }) {
       decimals: cfg.token.decimals,
       token: cfg.token.symbol,
       network: cfg.network,
-      reason: linea.concepto || 'sin concepto declarado'
+      reason: linea.concepto || 'sin concepto declarado',
+      concepto: linea.concepto
     })
   }
 
