@@ -11,6 +11,9 @@ CLAUDE.md
 code/data/
 code/runs/
 code/state/
+app/state/
+app/runs/
+_verify.txt
 
 # --- node ---
 node_modules/
