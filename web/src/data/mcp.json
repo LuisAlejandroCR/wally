@@ -13,25 +13,25 @@
     {
       "name": "cerrojo_politicas",
       "label": "List the policies",
-      "body": "Caps, allowlist and the permitted token. Read only.",
+      "body": "Caps, allowlist, permitted token.",
       "readOnly": true
     },
     {
       "name": "cerrojo_simular_pago",
       "label": "Simulate one payment",
-      "body": "ALLOW or DENY from the WDK policy engine, with the policy, the rule and the reason. Touches no network.",
+      "body": "ALLOW or DENY, with the rule that decided.",
       "readOnly": true
     },
     {
       "name": "cerrojo_correr_nomina",
       "label": "Run a payroll",
-      "body": "CSV in, receipt out. Always dry-run: this server has no way to ask for live.",
+      "body": "CSV in, receipt out. Always dry-run.",
       "readOnly": false
     },
     {
       "name": "cerrojo_estado_diario",
       "label": "Today's counter",
-      "body": "How much of the daily cap is committed, and how much is left.",
+      "body": "How much of the daily cap is left.",
       "readOnly": true
     },
     {
@@ -43,36 +43,38 @@
     {
       "name": "cerrojo_saldo",
       "label": "Treasury balance",
-      "body": "Read through toReadOnlyAccount(), an object with no send method on it.",
+      "body": "Through an object with no send method.",
       "readOnly": true
     },
     {
       "name": "cerrojo_cotizar",
       "label": "Quote a fee",
-      "body": "What a transfer would cost. A quote is not a permission.",
+      "body": "What a transfer would cost.",
       "readOnly": true
     },
     {
       "name": "cerrojo_proponer_pago",
       "label": "Propose a payment",
-      "body": "If the policies allow it, leaves a voucher for a person. Signs nothing.",
+      "body": "Leaves a voucher for a person. Signs nothing.",
       "readOnly": false
     },
     {
       "name": "cerrojo_estado_vale",
       "label": "Voucher status",
-      "body": "Proposed, approved, executed, denied, rejected or expired. Looking at a voucher does not move it.",
+      "body": "Proposed, approved, executed, denied or expired.",
       "readOnly": true
     }
   ],
   "absent": [
     {
       "name": "cerrojo_enviar",
-      "body": "No tool signs or sends. Not in dry-run, not with a flag, not at all."
+      "label": "Sign and send",
+      "body": "Not in dry-run, not with a flag, not at all."
     },
     {
       "name": "cerrojo_aprobar",
-      "body": "Approving exists only in the CLI, where a person types it. A prompt cannot pay itself."
+      "label": "Approve a voucher",
+      "body": "Only in the CLI, where a person types it."
     }
   ],
   "transcript": [
@@ -105,7 +107,7 @@
           }
         ]
       },
-      "reading": "Refused by name, and the trace shows both rules that looked at it. No network was touched to say no."
+      "reading": "Refused by name. No network was touched to say no."
     },
     {
       "step": 2,
@@ -124,7 +126,7 @@
         "razon": "La suma del dia superaria el tope diario de 1500000000 unidades base (1500.000000 USDT).",
         "nota": "No se crea vale para una orden denegada. Cambia la orden, no la politica."
       },
-      "reading": "The recipient is on the list and the amount is under the per-transfer cap — and it still fails, because 1,296 USDT already went out today. No voucher is created for a denied order."
+      "reading": "On the list and under the cap — and still refused: 1,296 USDT already went out today."
     },
     {
       "step": 3,
@@ -146,7 +148,7 @@
         "siguiente_paso": "Una persona tiene que ejecutar en su terminal: cerrojo aprobar vale_2026-08-23T07-05-38-106Z_dd4fb7",
         "nota": "Este servidor no puede aprobar el vale. La aprobacion vuelve a pasar por las politicas, y sin --live --confirmo la ejecucion sigue siendo dry-run."
       },
-      "reading": "The best outcome available to the agent is a voucher that expires in fifteen minutes, fingerprinted so the order cannot change between the proposal and the signature."
+      "reading": "The best outcome available: a voucher, fingerprinted, expiring in fifteen minutes."
     }
   ]
 }

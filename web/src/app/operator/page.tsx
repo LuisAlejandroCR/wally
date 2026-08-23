@@ -3,6 +3,7 @@ import { SignInButton } from '@clerk/nextjs'
 import { OperatorPanel } from '@/components/OperatorPanel'
 import { liveApiUrl } from '@/lib/cerrojo'
 import { Cta, NextSteps, Page, PageHeader, Section } from '@/components/Page'
+import { Help } from '@/components/Help'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,7 @@ export default async function OperatorPage () {
             Run a payroll <em>through the lock</em>
           </>
         }
-        lead="Reading is public. Running a payroll spends the day’s accumulator and writes a receipt, so it sits behind a sign-in — which widens nothing: the caps still come from the policy engine."
+        lead="Reading is public. Running a payroll spends the day’s accumulator and writes a receipt, so it sits behind a sign-in."
       />
 
       {userId ? (
@@ -30,18 +31,23 @@ export default async function OperatorPage () {
         <Section
           tone="panel"
           title="Sign in to run a payroll"
-          lead="One click with Google. Everything that only reads or decides is open without an account — including the live probe on The proof, where you can ask the lock about any payment you like."
+          lead={
+            <>
+              One click with Google. Everything that only reads or decides is open without an account — including the
+              live probe on The proof.
+              <Help title="Why an account at all?">
+                To keep one shared engine from being run by everyone at once. It widens nothing: this deployment has
+                no endpoint that executes, so the worst an authenticated run can do is write a dry-run receipt and
+                move the day&apos;s counter.
+              </Help>
+            </>
+          }
         >
           <SignInButton mode="modal">
             <button className="rounded-full bg-gold px-5 py-2.5 font-semibold text-navy shadow-[0_14px_30px_-12px_rgba(233,162,59,0.75)] transition-colors hover:bg-gold-2">
               Sign in with Google
             </button>
           </SignInButton>
-          <p className="max-w-3xl text-sm leading-relaxed text-muted">
-            The account exists to keep one shared engine from being run by everyone at once. It widens nothing: this
-            deployment has no endpoint that executes, so the worst an authenticated run can do is write a dry-run
-            receipt and move the day’s counter.
-          </p>
         </Section>
       )}
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 
 /**
- * The whole argument as a five-beat cartoon, about twenty seconds, no video file.
+ * The whole argument as a six-beat cartoon, under half a minute, no video file.
  *
  * It is a story with a cast, not a diagram that moves: the agent hands over a
  * plan, a sticky note stows away in the payroll and keeps turning up, the lock
@@ -19,7 +19,8 @@ import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties }
  * Three rules it obeys:
  *   - motion can be stopped (WCAG 2.2.2), so there is a pause, a replay and dots;
  *   - reduced motion gets the beats as static panels, never a loop;
- *   - every figure is a prop from the receipt this page already renders.
+ *   - every figure is a prop: the receipt this page renders, and the tool list
+ *     the MCP server answered with.
  */
 
 type Beat = { ms: number; caption: string }
@@ -29,7 +30,8 @@ const BEATS: Beat[] = [
   { ms: 4200, caption: 'The agent proposes. It is never given a key' },
   { ms: 4800, caption: 'Every line meets the lock' },
   { ms: 4400, caption: 'Refused by name. The stowaway bounces off' },
-  { ms: 4400, caption: 'The receipt balances. The stowaway got nothing' }
+  { ms: 4400, caption: 'The receipt balances. The stowaway got nothing' },
+  { ms: 4800, caption: 'Ask over MCP and the best you get is a voucher' }
 ]
 
 const SECONDS = Math.round(BEATS.reduce((n, b) => n + b.ms, 0) / 1000)
@@ -109,12 +111,18 @@ export function Explainer ({
   approved,
   blocked,
   notAttempted,
-  lines
+  lines,
+  tools,
+  absent
 }: {
   approved: number
   blocked: number
   notAttempted: number
   lines: number
+  /** Tools the MCP server actually registered. Counted from `data/mcp.json`. */
+  tools: number
+  /** The two it did not: sending and approving. Counted from the same file. */
+  absent: number
 }) {
   const [scene, setScene] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -159,7 +167,7 @@ export function Explainer ({
     setPaused(false)
   }
 
-  const narration = `A five-beat animation. One: a payroll file arrives with an instruction typed into one of its cells. Two: the agent reads it and proposes ${lines} payments, holding no key. Three: every proposed line runs into the WDK policy engine and its five rules. Four: ${approved} approved, ${blocked} blocked by name, ${notAttempted} not attempted, and the injected line is refused. Five: the receipt balances — ${approved} plus ${blocked} plus ${notAttempted} equals ${lines} — and the injected line was paid nothing.`
+  const narration = `A six-beat animation. One: a payroll file arrives with an instruction typed into one of its cells. Two: the agent reads it and proposes ${lines} payments, holding no key. Three: every proposed line runs into the WDK policy engine and its five rules. Four: ${approved} approved, ${blocked} blocked by name, ${notAttempted} not attempted, and the injected line is refused. Five: the receipt balances — ${approved} plus ${blocked} plus ${notAttempted} equals ${lines} — and the injected line was paid nothing. Six: an agent connected over MCP gets ${tools} tools and not the ${absent} that would move money; the most it can obtain is a voucher, which a person approves by typing a command the model cannot reach.`
 
   const scenes = [
     /* ── 1 · the payroll arrives, and something rides in with it ─────────── */
@@ -309,6 +317,62 @@ export function Explainer ({
         <Stowaway mood="flat" x={268} y={140} scale={0.6} />
         <text x="268" y="174" className="sc-whisper">paid 0.00</text>
       </g>
+    </svg>,
+
+    /* ── 6 · the agent channel: a wall, and one thing that gets through ──── */
+    <svg key="s6" viewBox="0 0 320 190" className="sc-art" aria-hidden="true">
+      <ellipse cx="160" cy="182" rx="128" ry="7" className="sc-shadow" />
+
+      {/* The wall is the whole argument: two programs, and a person in only one
+          of them. It has a gap, because the channel is not closed — it is just
+          not a way to move money. */}
+      <rect x="148" y="2" width="11" height="82" rx="5.5" className="sc-wall" />
+      <rect x="148" y="118" width="11" height="62" rx="5.5" className="sc-wall" />
+
+      <g transform="translate(-6 30) scale(0.52)">
+        <Agent />
+      </g>
+
+      <g className="sc-mcp">
+        <rect x="4" y="6" width="104" height="22" rx="7" className="sc-mcp-box" />
+        <text x="56" y="21" className="sc-mcp-text">MCP · {tools} tools</text>
+      </g>
+
+      {/* The two that were never registered, drawn on the agent's side of the
+          wall so it is obvious which side they are missing from. */}
+      <text x="76" y="114" className="sc-tag">{absent} tools that do not exist</text>
+      {['send', 'approve'].map((t, i) => (
+        <g key={t} className="sc-gone" style={{ animationDelay: `${700 + i * 260}ms` }}>
+          <rect x="82" y={122 + i * 28} width="58" height="21" rx="6" className="sc-gone-box" />
+          <text x="111" y={137 + i * 28} className="sc-gone-text">{t}</text>
+          <line x1="86" y1={132 + i * 28} x2="136" y2={132 + i * 28} className="sc-gone-slash" />
+        </g>
+      ))}
+      
+      <g transform="translate(108 101)">
+        <g className="sc-voucher">
+          <rect x="-44" y="-15" width="88" height="30" rx="7" className="sc-voucher-slip" />
+          <text x="0" y="-2" className="sc-voucher-big">voucher</text>
+          <text x="0" y="10" className="sc-voucher-small">expires in 15 min</text>
+        </g>
+      </g>
+
+      <g className="sc-term">
+        <rect x="176" y="20" width="140" height="58" rx="10" className="sc-term-box" />
+        <circle cx="188" cy="34" r="3" className="sc-term-dot" />
+        <text x="188" y="56" className="sc-term-text">$ cerrojo aprobar</text>
+        <text x="188" y="70" className="sc-term-text sc-term-dim">vale_…dd4fb7</text>
+      </g>
+
+      <g className="sc-person-g">
+        <circle cx="206" cy="134" r="12" className="sc-person" />
+        <path d="M186 176a20 20 0 0 1 40 0z" className="sc-person" />
+      </g>
+
+      <g className="sc-approve">
+        <circle cx="272" cy="142" r="19" className="sc-seal-ring" />
+        <path d="M262 142l7 8 14-16" className="sc-seal-tick" fill="none" />
+      </g>
     </svg>
   ]
 
@@ -329,7 +393,7 @@ export function Explainer ({
       <figure className="sc-wrap">
         <div className="sc sc-static">{BEATS.map((_, i) => stage(i))}</div>
         <figcaption className="sc-controls">
-          <span className="sc-hint">Five beats · every figure read from the receipt</span>
+          <span className="sc-hint">{BEATS.length} beats · every figure read from the run</span>
         </figcaption>
       </figure>
     )
@@ -377,7 +441,7 @@ export function Explainer ({
             />
           ))}
         </span>
-        <span className="sc-hint">{SECONDS}s · no sound · figures read from the receipt</span>
+        <span className="sc-hint">{SECONDS}s · no sound · every figure read from the run</span>
       </figcaption>
     </figure>
   )

@@ -1,33 +1,14 @@
 import clean from '@/data/run-clean.json'
+import mcp from '@/data/mcp.json'
 import type { Receipt } from '@/lib/cerrojo'
 import { LockFlow } from '@/components/LockFlow'
 import { Explainer } from '@/components/Explainer'
-import { AgentTools, LiveTransfer, VoucherChain } from '@/components/AgentChannel'
+import { AgentStats, LiveTransfer, VoucherChain } from '@/components/AgentChannel'
 import { Amount } from '@/components/Receipt'
-import { Card, Cta, NextSteps, Note, Page, PageHeader, Section } from '@/components/Page'
+import { Card, Cta, NextSteps, Note, Page, PageHeader, Section, Stat, StatRow } from '@/components/Page'
 
 const receipt = clean as unknown as Receipt
 const t = receipt.totals
-
-/** A number nobody has to squint at. The label says what it is; the tone says how it went. */
-function BigNumber ({
-  value,
-  label,
-  tone,
-  delay = 0
-}: {
-  value: number | string
-  label: string
-  tone: string
-  delay?: number
-}) {
-  return (
-    <div className="count-in rise rounded-xl border border-border bg-panel p-5" style={{ animationDelay: `${delay}ms` }}>
-      <div className={`text-4xl font-bold tabular-nums sm:text-5xl ${tone}`}>{value}</div>
-      <div className="mt-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-muted">{label}</div>
-    </div>
-  )
-}
 
 /**
  * The headline arrives a word at a time.
@@ -92,7 +73,14 @@ export default function Home () {
       />
 
       <div className="-mt-4">
-        <Explainer approved={t.ejecutadas} blocked={t.denegadas} notAttempted={t.no_intentadas} lines={t.lineas} />
+        <Explainer
+          approved={t.ejecutadas}
+          blocked={t.denegadas}
+          notAttempted={t.no_intentadas}
+          lines={t.lineas}
+          tools={mcp.tools.length}
+          absent={mcp.absent.length}
+        />
       </div>
 
       <Section tone="panel">
@@ -110,12 +98,19 @@ export default function Home () {
         title={`One payroll, ${t.lineas} lines`}
         aside={`Dry run on ${receipt.run.network} · every figure from the receipt`}
       >
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <BigNumber value={t.lineas} label="Analysed" tone="text-foreground" delay={0} />
-          <BigNumber value={t.ejecutadas} label="Approved" tone="text-green" delay={90} />
-          <BigNumber value={t.denegadas} label="Blocked" tone="text-red" delay={180} />
-          <BigNumber value={t.no_intentadas} label="Not attempted" tone="text-amber" delay={270} />
-        </div>
+        <StatRow>
+          <Stat value={t.lineas} label="Analysed" size="lg" delay={0} />
+          <Stat value={t.ejecutadas} label="Approved" tone="text-green" help="approved" size="lg" delay={90} />
+          <Stat value={t.denegadas} label="Blocked" tone="text-red" help="blocked" size="lg" delay={180} />
+          <Stat
+            value={t.no_intentadas}
+            label="Not attempted"
+            tone="text-amber"
+            help="not-attempted"
+            size="lg"
+            delay={270}
+          />
+        </StatRow>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rise rounded-xl border border-green/40 bg-green-bg p-5">
@@ -170,19 +165,20 @@ export default function Home () {
             Give the agent a wallet. <em>Don’t give it a key.</em>
           </>
         }
-        lead="Cerrojo is also an MCP server. Point Claude Code or Claude Desktop at it and the agent gets nine tools over stdio — none of which can move a cent."
+        lead={`Cerrojo is an MCP server too. Point Claude Code or Claude Desktop at it and the agent gets ${mcp.tools.length} tools — none of which can move a cent.`}
+        aside="stdio or HTTP"
         className="scroll-mt-24"
       >
-        <AgentTools />
+        <AgentStats />
 
         <h3 className="pt-3 text-lg font-bold">So the most an agent can do is ask</h3>
         <VoucherChain />
         <Note>
-          That asymmetry is the safety model: the channel that proposes and the channel that approves are different
-          programs, and only one of them has a person in it. A prompt cannot pay itself.
+          Proposing and approving are different programs, and only one of them has a person in it. A prompt cannot pay
+          itself.
         </Note>
         <Cta href="/proof#agent" tone="primary">
-          Point your own agent at it →
+          See every tool, and a real session →
         </Cta>
       </Section>
 

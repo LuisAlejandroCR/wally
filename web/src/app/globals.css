@@ -439,6 +439,36 @@ h2 em .word,
 @keyframes sulk-in { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
 .sc-sulk { animation: sulk-in .6s var(--ease-out) 2.4s both; }
 
+/* ── beat 6 · the agent channel: a wall, and one thing that gets through ──
+   The wall is the safety model drawn once: two programs, a person in only one
+   of them, and a gap that carries a voucher rather than a payment. */
+.sc-wall { fill: var(--navy); }
+.sc-mcp-box { fill: var(--panel-high); stroke: var(--border-strong); stroke-width: 1.5; }
+.sc-mcp-text { fill: var(--navy); font-family: var(--font-geist-mono), monospace; font-size: 11px; font-weight: 700; text-anchor: middle; }
+.sc-gone-box { fill: var(--red-bg); stroke: var(--red); stroke-width: 1.6; stroke-dasharray: 4 3; }
+.sc-gone-text { fill: var(--red); font-family: var(--font-geist-mono), monospace; font-size: 11px; font-weight: 700; text-anchor: middle; }
+.sc-gone-slash { stroke: var(--red); stroke-width: 2.2; stroke-linecap: round; }
+.sc-voucher-slip { fill: var(--gold-bg); stroke: var(--gold); stroke-width: 2; }
+.sc-voucher-big { fill: var(--navy); font-size: 12.5px; font-weight: 800; text-anchor: middle; }
+.sc-voucher-small { fill: var(--muted); font-size: 9px; font-weight: 700; text-anchor: middle; }
+.sc-term-box { fill: var(--navy); }
+.sc-term-dot { fill: var(--gold); }
+.sc-term-text { fill: #fff; font-family: var(--font-geist-mono), monospace; font-size: 11px; font-weight: 600; }
+.sc-term-dim { fill: rgba(255, 255, 255, .55); }
+.sc-person { fill: var(--navy); }
+
+.sc-mcp { animation: pop .5s var(--ease-out) .2s both; transform-origin: 56px 17px; }
+.sc-gone { animation: pop .45s var(--ease-out) both; transform-origin: 111px 132px; }
+
+/* The voucher is the only thing in the frame that crosses the wall. It starts
+   on the agent's side and stops on the person's, which is the whole beat. */
+@keyframes voucher-through { 0% { opacity: 0; transform: translateX(-38px) scale(.92); } 22% { opacity: 1; } 100% { opacity: 1; transform: translateX(102px) scale(1); } }
+.sc-voucher { animation: voucher-through 1.7s var(--ease-out) 1.4s both; }
+
+.sc-term { animation: pop .5s var(--ease-out) 2.5s both; transform-origin: 246px 49px; }
+.sc-person-g { animation: pop .5s var(--ease-out) 2.35s both; transform-origin: 206px 152px; }
+.sc-approve { animation: seal-in .55s var(--ease-out) 3.25s both; transform-origin: 272px 142px; }
+
 /* The bar at the foot is the only clock the viewer needs; React drives it. */
 .sc-track { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--panel-high); z-index: 2; }
 .sc-progress { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg, var(--gold), #b45309); }
@@ -489,7 +519,7 @@ h2 em .word,
 @media (prefers-reduced-motion: reduce) {
   .sc-scene, .sc-fly, .sc-line, .sc-sneak, .sc-bob, .sc-antenna, .sc-blink, .sc-bubble, .sc-nokey,
   .sc-tick, .sc-rule, .sc-gate, .sc-nope, .sc-stamp, .sc-shield, .sc-bounce, .sc-print, .sc-seal,
-  .sc-sulk {
+  .sc-sulk, .sc-mcp, .sc-gone, .sc-term, .sc-person-g, .sc-approve {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
@@ -498,6 +528,13 @@ h2 em .word,
     animation: none !important;
     opacity: 1 !important;
     transform: translateX(var(--rest)) !important;
+  }
+  /* Same reasoning as the chips: the voucher's whole meaning is which side of
+     the wall it ended on, so it is parked there rather than at its start. */
+  .sc-voucher {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: translateX(102px) !important;
   }
   .sc-ping { display: none; }
   .sc::after { display: none; }

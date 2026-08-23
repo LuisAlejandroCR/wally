@@ -1,6 +1,8 @@
 import mcp from '@/data/mcp.json'
 import tx from '@/data/live-tx.json'
-import { Card, Note } from '@/components/Page'
+import { Card, Note, Stat, StatRow } from '@/components/Page'
+import { Help } from '@/components/Help'
+import { McpConnect } from '@/components/McpConnect'
 import { Amount } from '@/components/Receipt'
 
 /**
@@ -10,66 +12,111 @@ import { Amount } from '@/components/Receipt'
  * pipeline with an agent on the other end of it, over MCP — and the argument is
  * carried by what is *missing* from the tool list, so the absent tools are drawn
  * as loudly as the present ones. Everything here is the server's own answer,
- * captured from a real stdio session and kept in `data/mcp.json` unedited.
+ * captured from a real session and kept in `data/mcp.json` unedited.
+ *
+ * It used to say all of that in prose: eleven cards, three sentences each, the
+ * same claim made twice on two screens. The claim is a ratio, and a ratio is
+ * better counted than described — so the overview counts it and the proof screen
+ * tables it, both in the shapes the rest of the site already uses.
  */
 
 const TOOLS = mcp.tools
 const ABSENT = mcp.absent
 const STEPS = mcp.transcript
 
-/** One tool the agent actually gets. */
-function Tool ({ name, label, body, readOnly }: (typeof TOOLS)[number]) {
+const READS = TOOLS.filter((t) => t.readOnly)
+const WRITES = TOOLS.filter((t) => !t.readOnly)
+
+/**
+ * The tool list as four numbers.
+ *
+ * The overview does not need the names; it needs the shape of the list, and the
+ * last figure is the one worth reading twice. Same `Stat` the payroll totals use
+ * two sections above, so the page counts things one way.
+ */
+export function AgentStats () {
   return (
-    <div className="rounded-xl border border-border bg-panel p-4">
-      <div className="flex items-start justify-between gap-3">
-        <code className="break-all font-mono text-sm font-semibold text-navy">{name}</code>
-        {readOnly && (
-          <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
-            read only
-          </span>
-        )}
-      </div>
-      <p className="mt-1.5 text-sm font-semibold">{label}</p>
-      <p className="mt-1 text-sm leading-relaxed text-muted">{body}</p>
-    </div>
+    <StatRow>
+      <Stat value={TOOLS.length} label="Tools" help="mcp" size="lg" delay={0} />
+      <Stat value={READS.length} label="Read only" tone="text-blue" size="lg" delay={90} />
+      <Stat value={WRITES.length} label="Write a file" tone="text-amber" help="tool-effect" size="lg" delay={180} />
+      <Stat value={0} label="That can send" tone="text-green" help="voucher" size="lg" delay={270} />
+    </StatRow>
   )
 }
 
-/** A tool that does not exist, drawn so that its absence is the point. */
-function Absent ({ name, body }: (typeof ABSENT)[number]) {
-  return (
-    <div className="rounded-xl border border-dashed border-red/50 bg-red-bg p-4">
-      <div className="flex items-start justify-between gap-3">
-        <code className="break-all font-mono text-sm font-semibold text-red line-through decoration-2">{name}</code>
-        <span className="shrink-0 rounded-full border border-red/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-red">
-          no such tool
-        </span>
-      </div>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted">{body}</p>
-    </div>
-  )
+type Kind = 'read' | 'write' | 'absent'
+
+const EFFECT: Record<Kind, { label: string; pill: string }> = {
+  read: { label: 'reads', pill: 'border-border bg-panel-high text-muted' },
+  write: { label: 'writes a file', pill: 'border-amber/40 bg-amber-bg text-amber' },
+  absent: { label: 'never registered', pill: 'border-red/40 bg-red-bg text-red' }
 }
 
-/** The nine tools the agent gets, and the two it does not. */
+/**
+ * Every tool on one axis, including the two that do not exist.
+ *
+ * Putting the absent pair in the same table as the rest is the whole point: in a
+ * separate grid they read as a footnote, and in the same column as `reads` and
+ * `writes a file` they read as the end of a list that simply stops before the
+ * thing you were looking for.
+ */
 export function AgentTools () {
+  const rows: { name: string; label: string; body: string; kind: Kind }[] = [
+    ...READS.map((t) => ({ name: t.name, label: t.label, body: t.body, kind: 'read' as const })),
+    ...WRITES.map((t) => ({ name: t.name, label: t.label, body: t.body, kind: 'write' as const })),
+    ...ABSENT.map((a) => ({ name: a.name, label: a.label, body: a.body, kind: 'absent' as const }))
+  ]
+
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {TOOLS.map((t) => (
-          <Tool key={t.name} {...t} />
-        ))}
+    <div className="space-y-3">
+      <div className="scroll-x rounded-xl border border-border bg-panel">
+        <table className="w-full min-w-[44rem] border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted">
+              <th className="p-3 font-semibold">Tool</th>
+              <th className="p-3 font-semibold">What it does</th>
+              <th className="p-3 font-semibold">
+                Effect
+                <Help of="tool-effect" />
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => {
+              const gone = r.kind === 'absent'
+              return (
+                <tr
+                  key={r.name}
+                  className={`row-in border-b border-border/60 align-top last:border-0 ${gone ? 'bg-red-bg/40' : ''}`}
+                  style={{ animationDelay: `${Math.min(i * 45, 450)}ms` }}
+                >
+                  <td className="p-3">
+                    <code
+                      className={`font-mono text-xs font-semibold ${
+                        gone ? 'text-red line-through decoration-2' : 'text-navy'
+                      }`}
+                    >
+                      {r.name}
+                    </code>
+                  </td>
+                  <td className="p-3">
+                    <span className="font-semibold">{r.label}</span>
+                    <div className="text-xs text-muted">{r.body}</div>
+                  </td>
+                  <td className="p-3">
+                    <span
+                      className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${EFFECT[r.kind].pill}`}
+                    >
+                      {EFFECT[r.kind].label}
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {ABSENT.map((a) => (
-          <Absent key={a.name} {...a} />
-        ))}
-      </div>
-
-      <Note>
-        {TOOLS.length} tools over stdio, {TOOLS.filter((t) => t.readOnly).length} of them read-only. The two that would
-        move money are not in the list — and an MCP client can only call what the server registered.
-      </Note>
     </div>
   )
 }
@@ -79,21 +126,24 @@ const CHAIN = [
     n: '01',
     who: 'The agent',
     what: 'proposes',
-    body: 'It calls cerrojo_proponer_pago. The policy engine judges the order there and then; a denied order never becomes a voucher.',
+    help: undefined,
+    body: 'Judged on the spot. A denied order never becomes a voucher.',
     tone: 'border-border bg-panel'
   },
   {
     n: '02',
     who: 'The voucher',
     what: 'waits',
-    body: 'Fifteen minutes, and a sha256 of the order. The amount and the recipient cannot change between the proposal and the signature.',
+    help: 'voucher' as const,
+    body: 'Fifteen minutes, under a sha256 of the order.',
     tone: 'border-amber/40 bg-amber-bg'
   },
   {
     n: '03',
     who: 'A person',
     what: 'approves',
-    body: 'cerrojo aprobar <id> --live --confirmo, typed in a terminal the model cannot reach. The policies run again before anything is signed.',
+    help: 'revalidated' as const,
+    body: 'Typed in a terminal the model cannot reach. The policies run again.',
     tone: 'border-green/40 bg-green-bg'
   }
 ]
@@ -108,7 +158,10 @@ export function VoucherChain () {
             <span className="font-mono text-sm font-semibold text-blue">{s.n}</span>
             <span className="font-mono text-xs uppercase tracking-wider text-muted">{s.what}</span>
           </div>
-          <h3 className="mt-2 text-xl font-bold">{s.who}</h3>
+          <h3 className="mt-2 text-xl font-bold">
+            {s.who}
+            {s.help && <Help of={s.help} />}
+          </h3>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">{s.body}</p>
         </div>
       ))}
@@ -124,39 +177,7 @@ export function VoucherChain () {
  * none of the nine tools can send, approve or read the seed.
  */
 export function RemoteEndpoint () {
-  const config = JSON.stringify(
-    { mcpServers: { cerrojo: { type: 'http', url: mcp.remote.url } } },
-    null,
-    2
-  )
-  return (
-    <div className="space-y-4">
-      <p className="max-w-3xl leading-relaxed text-muted">
-        The same nine tools are served over Streamable HTTP. Drop this into Claude Code&apos;s{' '}
-        <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-sm">.mcp.json</code> or Claude
-        Desktop&apos;s <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-sm">claude_desktop_config.json</code>,
-        restart the client, and your agent is talking to the engine behind this page.
-      </p>
-
-      <pre className="overflow-x-auto rounded-lg border border-border bg-panel-high p-3.5 font-mono text-xs leading-relaxed">
-        {config}
-      </pre>
-
-      <div className="rounded-xl border border-gold/50 bg-gold-bg p-4">
-        <p className="text-sm font-semibold">Then ask it for something the lock has an opinion about:</p>
-        <p className="mt-2 text-sm italic leading-relaxed text-muted">
-          &ldquo;Using the cerrojo tools: what are the payroll policies, how much of today&apos;s budget is left, and
-          what happens if I try to send 900 USDT to 0x…dEaD?&rdquo;
-        </p>
-        <p className="mt-2 text-sm leading-relaxed">
-          It comes back with <strong>DENY</strong>, the policy, the rule and the reason. Tell it to send the money
-          anyway and it cannot: there is no tool that sends, and none that approves.
-        </p>
-      </div>
-
-      <Note>{mcp.remote.note}</Note>
-    </div>
-  )
+  return <McpConnect url={mcp.remote.url} note={mcp.remote.note} />
 }
 
 /**
@@ -205,57 +226,79 @@ export function LiveTransfer () {
 
       <Note>
         The command a person typed:{' '}
-        <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-xs">{tx.command}</code>. The policy engine
-        answered <strong>{tx.revalidated}</strong> a second time, at approval, before anything was signed. It is the
-        only transfer this treasury has ever made.
+        <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-xs">{tx.command}</code>. The engine
+        answered <strong>{tx.revalidated}</strong> again at approval
+        <Help of="revalidated" />. It is the only transfer this treasury has ever made.
       </Note>
     </div>
   )
 }
 
-/** A block of JSON, monospaced and scrollable rather than wrapped into soup. */
-function Json ({ value, tone = 'plain' }: { value: unknown; tone?: 'plain' | 'deny' | 'allow' }) {
+/**
+ * One side of a call, with its role on the lid rather than in a caption above
+ * it. The tone is the verdict, so the answer is readable before it is read.
+ */
+function Pane ({ lid, value, tone = 'plain' }: { lid: string; value: unknown; tone?: 'plain' | 'deny' | 'allow' }) {
   const shell =
     tone === 'deny'
-      ? 'border-red/40 bg-red-bg'
+      ? 'border-red/40'
       : tone === 'allow'
-        ? 'border-green/40 bg-green-bg'
-        : 'border-border bg-panel-high'
+        ? 'border-green/40'
+        : 'border-border'
+  const head =
+    tone === 'deny'
+      ? 'border-red/40 bg-red-bg text-red'
+      : tone === 'allow'
+        ? 'border-green/40 bg-green-bg text-green'
+        : 'border-border bg-panel text-muted'
+
   return (
-    <pre className={`overflow-x-auto rounded-lg border p-3.5 font-mono text-xs leading-relaxed ${shell}`}>
-      {JSON.stringify(value, null, 2)}
-    </pre>
+    <div className={`overflow-hidden rounded-lg border ${shell}`}>
+      <div className={`border-b px-3 py-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.16em] ${head}`}>
+        {lid}
+      </div>
+      <pre className="scroll-x bg-panel-high p-3 font-mono text-xs leading-relaxed">
+        {JSON.stringify(value, null, 2)}
+      </pre>
+    </div>
   )
 }
 
 /**
- * The captured session, verbatim. Three calls: refused by a cap, refused by the
- * day's counter, and the best thing an agent can get — a voucher.
+ * The captured session. Three calls: refused by a cap, refused by the day's
+ * counter, and the best thing an agent can get — a voucher.
+ *
+ * The JSON is the evidence and stays whole; everything that was wrapped around
+ * it has been cut to a verdict pill and one line of reading, because a reader
+ * who is looking at a `DENY` does not need a paragraph telling them it is one.
  */
 export function McpTranscript () {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {STEPS.map((s) => {
         const allowed = 'creado' in s.response && s.response.creado === true
         return (
           <Card key={s.step}>
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
               <h3 className="text-lg font-bold">
                 <span className="mr-2 font-mono text-sm font-semibold text-blue">0{s.step}</span>
                 {s.title}
               </h3>
-              <code className="font-mono text-xs text-muted">{s.tool}</code>
+              <div className="flex items-center gap-2.5">
+                <code className="font-mono text-xs text-muted">{s.tool}</code>
+                <span
+                  className={`rounded-full border px-2.5 py-1 text-xs font-bold ${
+                    allowed ? 'border-green/40 bg-green-bg text-green' : 'border-red/40 bg-red-bg text-red'
+                  }`}
+                >
+                  {allowed ? 'VOUCHER' : 'DENY'}
+                </span>
+              </div>
             </div>
 
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">the agent sent</p>
-                <Json value={s.request} />
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">the server answered</p>
-                <Json value={s.response} tone={allowed ? 'allow' : 'deny'} />
-              </div>
+              <Pane lid="the agent sent" value={s.request} />
+              <Pane lid="the server answered" value={s.response} tone={allowed ? 'allow' : 'deny'} />
             </div>
 
             <p className="mt-3 text-sm leading-relaxed text-muted">{s.reading}</p>
@@ -264,8 +307,8 @@ export function McpTranscript () {
       })}
 
       <Note>
-        Captured {mcp.captured} from a real stdio session against{' '}
-        <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-sm">src/mcp/server.js</code>. The engine
+        Captured {mcp.captured} against{' '}
+        <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-xs">src/mcp/server.js</code>. The engine
         answers in Spanish; nothing here was rewritten.
       </Note>
     </div>

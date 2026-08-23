@@ -1,6 +1,7 @@
 import clean from '@/data/run-clean.json'
 import poisoned from '@/data/run-poisoned.json'
 import recorded from '@/data/policies.json'
+import mcp from '@/data/mcp.json'
 import type { Receipt } from '@/lib/cerrojo'
 import { formatAmount, formatAmount2, liveApiUrl } from '@/lib/cerrojo'
 import { policyNameEn, reasonEn, ruleNameEn } from '@/lib/english'
@@ -9,7 +10,10 @@ import { CopyAddress } from '@/components/CopyAddress'
 import { ProofTabs } from '@/components/ProofTabs'
 import { AgentTools, LiveTransfer, McpTranscript, RemoteEndpoint, VoucherChain } from '@/components/AgentChannel'
 import { PolicyProbe } from '@/components/PolicyProbe'
-import { Card, Cta, NextSteps, Note, Page, PageHeader, Section } from '@/components/Page'
+import { Card, Cta, NextSteps, Note, Page, PageHeader, Section, Stat, StatRow } from '@/components/Page'
+import { Help } from '@/components/Help'
+import { FileAttachment } from '@/components/FileAttachment'
+import type { Term } from '@/lib/glossary'
 
 export const dynamic = 'force-dynamic'
 
@@ -91,9 +95,9 @@ function Sub ({ children }: { children: React.ReactNode }) {
 export default async function ProofPage () {
   const { data, live } = await loadPolicies()
 
-  const caps = [
-    { label: 'Per-transfer cap', value: data.topePorTransferencia, unit: data.token.symbol },
-    { label: 'Daily cap', value: data.topeDiario, unit: data.token.symbol }
+  const caps: { label: string; value: { base: string; legible: string }; unit: string; help: Term }[] = [
+    { label: 'Per-transfer cap', value: data.topePorTransferencia, unit: data.token.symbol, help: 'per-transfer-cap' },
+    { label: 'Daily cap', value: data.topeDiario, unit: data.token.symbol, help: 'daily-cap' }
   ]
 
   const receiptPanel = (
@@ -157,7 +161,8 @@ export default async function ProofPage () {
           </Card>
         ))}
       </div>
-      <Note>Carried as data, not followed as an instruction.</Note>
+      <Note>Carried as data, not followed as an instruction. The file itself:</Note>
+      <FileAttachment name="nomina_inyeccion.csv" expects={envenenada.run.inputSha256} />
 
       <Sub>Line by line</Sub>
       <div className="scroll-x rounded-xl border border-border bg-panel">
@@ -167,7 +172,10 @@ export default async function ProofPage () {
               <th className="p-3 font-semibold">#</th>
               <th className="p-3 font-semibold">Verdict, both files</th>
               <th className="p-3 font-semibold">Recipient</th>
-              <th className="p-3 text-right font-semibold">Amount</th>
+              <th className="p-3 text-right font-semibold">
+                Amount
+                <Help of="base-units" />
+              </th>
               <th className="p-3 font-semibold">Match</th>
             </tr>
           </thead>
@@ -220,28 +228,33 @@ export default async function ProofPage () {
       lead="Registered with WDK before any account exists."
       aside={live ? 'Read live from the engine.' : 'Recorded from the engine.'}
     >
-      <div className="grid gap-3 sm:grid-cols-3">
-        {caps.map((c) => (
-          <Card key={c.label}>
-            <div
-              className="text-3xl font-bold tabular-nums"
-              title={`${formatAmount(c.value.base, data.token.decimals)} ${c.unit}`}
-            >
-              {formatAmount2(c.value.base, data.token.decimals)}{' '}
-              <span className="text-base font-medium text-muted">{c.unit}</span>
-            </div>
-            <div className="mt-1 text-xs uppercase tracking-wider text-muted">{c.label}</div>
-            <div className="mt-2 font-mono text-xs text-muted">{c.value.base} base units</div>
-          </Card>
+      <StatRow cols={3}>
+        {caps.map((c, i) => (
+          <Stat
+            key={c.label}
+            value={
+              <>
+                {formatAmount2(c.value.base, data.token.decimals)}{' '}
+                <span className="text-base font-medium text-muted">{c.unit}</span>
+              </>
+            }
+            label={c.label}
+            help={c.help}
+            hint={`${c.value.base} base units`}
+            title={`${formatAmount(c.value.base, data.token.decimals)} ${c.unit}`}
+            delay={i * 90}
+          />
         ))}
-        <Card>
-          <div className="text-3xl font-bold tabular-nums">{data.destinatariosPermitidos}</div>
-          <div className="mt-1 text-xs uppercase tracking-wider text-muted">Allowed recipients</div>
-          <div className="mt-2 font-mono text-xs text-muted">
-            {data.red} · {data.token.symbol} {data.token.address.slice(0, 10)}…
-          </div>
-        </Card>
-      </div>
+        <Stat
+          value={data.destinatariosPermitidos}
+          label="Allowed recipients"
+          help="allowlist"
+          hint={`${data.red} · ${data.token.symbol} ${data.token.address.slice(0, 10)}…`}
+          delay={180}
+        />
+      </StatRow>
+
+      <FileAttachment name="allowlist.txt" />
 
       <Sub>Rule by rule</Sub>
       <div className="scroll-x rounded-xl border border-border bg-panel">
@@ -251,7 +264,10 @@ export default async function ProofPage () {
               <th className="p-3 font-semibold">Policy</th>
               <th className="p-3 font-semibold">Rule</th>
               <th className="p-3 font-semibold">Action</th>
-              <th className="p-3 font-semibold">Reason carried into the receipt</th>
+              <th className="p-3 font-semibold">
+                Reason carried into the receipt
+                <Help of="verbatim" />
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -301,44 +317,39 @@ export default async function ProofPage () {
           </tbody>
         </table>
       </div>
-      <Note>
-        The daily cap keeps its own counter: <code className="font-mono">rule.onSuccess</code> is in the WDK schema
-        but ignored at runtime in 1.0.0-beta.16.
-      </Note>
-
       <Sub>Now point one at it yourself</Sub>
       <p className="max-w-3xl text-muted">
-        No account needed. Type any address and any amount; the engine answers with the policy, the rule and its own
-        reason. Deciding costs no network, so nothing you do here can be sent, queued or undone.
+        No account needed — type any address and any amount. Deciding costs no network, so nothing here can be sent
+        or undone.
       </p>
       <PolicyProbe liveConfigured={live} />
     </Section>
   )
 
+  // The panel reads in the order someone would actually ask the questions:
+  // what does it get, what happens when it uses it, what would it take to move,
+  // can I try it, and did it ever complete.
   const agentPanel = (
     <Section
       title={
         <>
-          An agent asking, <em>three times</em>
+          {mcp.tools.length} tools. <em>None of them can send.</em>
         </>
       }
-      lead="A real MCP session against the same engine. It is refused by a cap, refused by the day's counter, and then handed a voucher instead of a payment."
-      aside="Captured from stdio."
+      lead="The same engine, with an agent on the other end of it over MCP."
+      aside="Captured from a real session."
     >
-      <McpTranscript />
-
-      <Sub>Point your own agent at it</Sub>
-      <RemoteEndpoint />
-
       <Sub>What the server registered</Sub>
       <AgentTools />
 
+      <Sub>An agent asking, three times</Sub>
+      <McpTranscript />
+
       <Sub>And what it takes to move</Sub>
       <VoucherChain />
-      <Note>
-        Approving is not a tool. It is a command a person types, and it re-runs the policy engine before it signs —
-        so an approval that was valid fifteen minutes ago can still be refused now.
-      </Note>
+
+      <Sub>Point your own agent at it</Sub>
+      <RemoteEndpoint />
 
       <Sub>The one time it went all the way through</Sub>
       <LiveTransfer />

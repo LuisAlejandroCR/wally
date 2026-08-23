@@ -1,6 +1,11 @@
 import type { Receipt, ReceiptLine } from '@/lib/cerrojo'
 import { explorerAddressUrl, formatAmount, formatAmount2, shortAddress, statusLabel } from '@/lib/cerrojo'
 import { CopyAddress } from '@/components/CopyAddress'
+import { FileAttachment } from '@/components/FileAttachment'
+import { Help } from '@/components/Help'
+import { Stat, StatRow } from '@/components/Page'
+import type { Term } from '@/lib/glossary'
+import { baseName, isAttached } from '@/lib/inputs'
 import { checkDetailEn, checkLabelEn, quoteNoteEn, reasonEn, ruleNameEn, whyEn } from '@/lib/english'
 
 /**
@@ -14,8 +19,11 @@ import { checkDetailEn, checkLabelEn, quoteNoteEn, reasonEn, ruleNameEn, whyEn }
 export function DryRunNote ({ network }: { network: string }) {
   return (
     <p className="text-sm text-muted">
-      <span className="text-foreground">Dry run on {network}.</span> Recipients are synthetic, so no explorer has
-      them — click one to copy. The token contract is real.
+      <span className="text-foreground">
+        Dry run on {network}
+        <Help of="dry-run" />
+      </span>{' '}
+      — recipients are synthetic, so click one to copy rather than to follow.
     </p>
   )
 }
@@ -90,36 +98,35 @@ export function StatusPill ({ estado, txHash = null }: { estado: ReceiptLine['es
 
 export function Totals ({ receipt }: { receipt: Receipt }) {
   const t = receipt.totals
-  const cells = [
-    { label: 'Approved', value: t.ejecutadas, tone: 'text-green' },
-    { label: 'Blocked', value: t.denegadas, tone: 'text-red' },
-    { label: 'Not attempted', value: t.no_intentadas, tone: 'text-amber' },
+  const cells: { label: string; value: number; tone: string; help?: Term }[] = [
+    { label: 'Approved', value: t.ejecutadas, tone: 'text-green', help: 'approved' },
+    { label: 'Blocked', value: t.denegadas, tone: 'text-red', help: 'blocked' },
+    { label: 'Not attempted', value: t.no_intentadas, tone: 'text-amber', help: 'not-attempted' },
     { label: 'Lines', value: t.lineas, tone: 'text-foreground' }
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {cells.map((c, i) => (
-        <div
-          key={c.label}
-          className="count-in rise rounded-xl border border-border bg-panel p-4"
-          style={{ animationDelay: `${i * 90}ms` }}
-        >
-          <div className={`text-3xl font-bold tabular-nums ${c.tone}`}>{c.value}</div>
-          <div className="mt-1 text-xs uppercase tracking-wider text-muted">{c.label}</div>
+    <div className="space-y-3">
+      <StatRow>
+        {cells.map((c, i) => (
+          <Stat key={c.label} value={c.value} label={c.label} tone={c.tone} help={c.help} delay={i * 90} />
+        ))}
+      </StatRow>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rise rounded-xl border border-green/40 bg-green-bg p-4">
+          <div className="text-2xl font-bold tabular-nums text-green">
+            <Amount base={t.montoEjecutado} decimals={t.decimals} />{' '}
+            <span className="text-base font-medium text-muted">USDT</span>
+          </div>
+          <div className="mt-1 text-xs uppercase tracking-wider text-muted">Authorised · simulated</div>
         </div>
-      ))}
-      <div className="col-span-2 rise rounded-xl border border-green/40 bg-green-bg p-4">
-        <div className="text-2xl font-bold tabular-nums text-green">
-          <Amount base={t.montoEjecutado} decimals={t.decimals} /> <span className="text-base font-medium text-muted">USDT</span>
+        <div className="rise rounded-xl border border-red/40 bg-red-bg p-4">
+          <div className="text-2xl font-bold tabular-nums text-red">
+            <Amount base={t.montoDenegado} decimals={t.decimals} />{' '}
+            <span className="text-base font-medium text-muted">USDT</span>
+          </div>
+          <div className="mt-1 text-xs uppercase tracking-wider text-muted">Stopped by the lock</div>
         </div>
-        <div className="mt-1 text-xs uppercase tracking-wider text-muted">Authorised · simulated</div>
-      </div>
-      <div className="col-span-2 rise rounded-xl border border-red/40 bg-red-bg p-4">
-        <div className="text-2xl font-bold tabular-nums text-red">
-          <Amount base={t.montoDenegado} decimals={t.decimals} /> <span className="text-base font-medium text-muted">USDT</span>
-        </div>
-        <div className="mt-1 text-xs uppercase tracking-wider text-muted">Stopped by the lock</div>
       </div>
     </div>
   )
@@ -219,8 +226,11 @@ export function FeeNote ({ receipt }: { receipt: Receipt }) {
   const english = quoteNoteEn(line.quoteNota)
   return (
     <p className="text-sm text-muted">
-      <span className="text-amber">Fees are estimates.</span> {english ?? line.quoteNota} Hover an amount for its
-      exact figure.
+      <span className="text-amber">
+        Fees are estimates
+        <Help of="fee-estimate" />
+      </span>{' '}
+      — {english ?? line.quoteNota}
     </p>
   )
 }
@@ -247,45 +257,71 @@ export function Checks ({ receipt }: { receipt: Receipt }) {
 export function RunMeta ({ receipt, source }: { receipt: Receipt; source: string }) {
   const r = receipt.run
   const tokenUrl = explorerAddressUrl(r.token.address, r.network)
-  const items = [
-    ['Run', r.id],
-    ['Mode', r.mode],
-    ['Network', r.network],
-    ['Token', `${r.token.slug.toUpperCase()} · ${r.token.decimals} decimals`],
-    ['Planner', r.planner.used ? `${r.planner.modo} · ${r.planner.model ?? ''}` : `${r.planner.modo} (no model)`],
-    ['Input', r.inputFile],
-    ['Input sha256', `${r.inputSha256.slice(0, 16)}…`],
-    ['Source', source]
-  ] as const
+  const input = baseName(r.inputFile)
+
+  const items: { k: string; v: string; help?: Term }[] = [
+    { k: 'Run', v: r.id, help: 'run-id' },
+    { k: 'Mode', v: r.mode, help: 'dry-run' },
+    { k: 'Network', v: r.network },
+    { k: 'Token', v: `${r.token.slug.toUpperCase()} · ${r.token.decimals} decimals` },
+    {
+      k: 'Planner',
+      v: r.planner.used ? `${r.planner.modo} · ${r.planner.model ?? ''}` : `${r.planner.modo} (no model)`,
+      help: 'planner'
+    },
+    { k: 'Source', v: source, help: 'source' }
+  ]
 
   return (
-    <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-      {items.map(([k, v]) => (
-        <div key={k}>
-          <dt className="text-xs uppercase tracking-wider text-muted">{k}</dt>
-          <dd className="font-mono text-xs break-all">{v}</dd>
+    <div className="space-y-4">
+      <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        {items.map(({ k, v, help }) => (
+          <div key={k}>
+            <dt className="text-xs uppercase tracking-wider text-muted">
+              {k}
+              {help && <Help of={help} />}
+            </dt>
+            <dd className="font-mono text-xs break-all">{v}</dd>
+          </div>
+        ))}
+        {/* The one address on this page with a populated explorer page: the token
+            contract is real and deployed, which the empty recipient pages are not. */}
+        <div>
+          <dt className="text-xs uppercase tracking-wider text-muted">Token contract</dt>
+          <dd className="font-mono text-xs break-all">
+            {tokenUrl ? (
+              <a
+                href={tokenUrl}
+                target="_blank"
+                rel="noreferrer"
+                title={`${r.token.address} on ${r.network}`}
+                className="text-blue underline decoration-dotted underline-offset-4 hover:decoration-solid"
+              >
+                {shortAddress(r.token.address)} ↗
+              </a>
+            ) : (
+              shortAddress(r.token.address)
+            )}
+          </dd>
         </div>
-      ))}
-      {/* The one address on this page with a populated explorer page: the token
-          contract is real and deployed, which the empty recipient pages are not. */}
-      <div>
-        <dt className="text-xs uppercase tracking-wider text-muted">Token contract</dt>
-        <dd className="font-mono text-xs break-all">
-          {tokenUrl ? (
-            <a
-              href={tokenUrl}
-              target="_blank"
-              rel="noreferrer"
-              title={`${r.token.address} on ${r.network}`}
-              className="text-blue underline decoration-dotted underline-offset-4 hover:decoration-solid"
-            >
-              {shortAddress(r.token.address)} ↗
-            </a>
-          ) : (
-            shortAddress(r.token.address)
-          )}
-        </dd>
+      </dl>
+
+      {/* The input used to be an absolute path on the machine that ran this.
+          Attaching the file is the version a reader can act on: open it, download
+          it, and check its hash against the one the receipt recorded. */}
+      <div className="space-y-1.5">
+        <p className="text-xs uppercase tracking-wider text-muted">
+          Input
+          <Help of="input-sha256" />
+        </p>
+        {isAttached(input) ? (
+          <FileAttachment name={input} expects={r.inputSha256} />
+        ) : (
+          <p className="font-mono text-xs break-all">
+            {input} · sha256 {r.inputSha256.slice(0, 16)}…
+          </p>
+        )}
       </div>
-    </dl>
+    </div>
   )
 }

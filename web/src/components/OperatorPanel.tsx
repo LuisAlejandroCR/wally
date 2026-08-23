@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Help } from '@/components/Help'
 import type { Receipt } from '@/lib/cerrojo'
 import { Checks, DryRunNote, FeeNote, ReceiptTable, RunMeta, Totals } from '@/components/Receipt'
 
@@ -57,6 +58,10 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-muted" htmlFor="csv">
             1 · Payroll file
+            <Help title="Payroll file">
+              Only the payrolls the engine ships with. Any other path is refused by the API with a typed 400 — the
+              same containment the MCP server applies.
+            </Help>
           </label>
           <select
             id="csv"
@@ -70,12 +75,15 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
               </option>
             ))}
           </select>
-          <p className="text-xs text-muted">Only payrolls the engine ships with; any other path is a typed 400.</p>
         </div>
 
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-muted" htmlFor="instruction">
             2 · Instruction
+            <Help title="Instruction">
+              What you would say to a person. Any language works; the recorded run used Spanish, which is why the
+              default is Spanish.
+            </Help>
           </label>
           <input
             id="instruction"
@@ -83,11 +91,13 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
             onChange={(e) => setInstruction(e.target.value)}
             className="w-full rounded-lg border border-border-strong bg-panel px-3 py-2 font-mono text-sm"
           />
-          <p className="text-xs text-muted">Any language. Spanish here only to match the recorded run.</p>
         </div>
 
         <div className="space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted">3 · Planner</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+            3 · Planner
+            <Help of="planner" />
+          </span>
           <div className="flex flex-wrap gap-2">
             {(['rules', 'llm'] as const).map((p) => (
               <button
@@ -104,7 +114,6 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted">Same lock either way: the model proposes, the engine decides.</p>
         </div>
 
         {/* One payroll uses 1,296 of the 1,500 daily budget, so the second visitor
@@ -120,10 +129,12 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
           />
           <span>
             Zero today&apos;s counter first
-            <span className="mt-0.5 block text-xs text-muted">
-              A full payroll spends 1,296 of the 1,500 daily budget. Untick it and run twice to watch the daily cap
-              refuse the second run.
-            </span>
+            <Help title="Zero today's counter">
+              A full payroll spends 1,296 of the 1,500 daily budget, so a second visitor would otherwise find
+              everything refused by <code className="font-mono">cap-diario</code>. Untick it and run twice to watch
+              that happen on purpose. It zeroes our own counter and nothing else — the caps, the allowlist and the
+              token still decide.
+            </Help>
           </span>
         </label>
 

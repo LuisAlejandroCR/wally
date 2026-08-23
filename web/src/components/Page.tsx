@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Reveal } from '@/components/Reveal'
+import { Help } from '@/components/Help'
+import type { Term } from '@/lib/glossary'
 
 /**
  * The page kit. Every screen is built from these five pieces, so a new page
@@ -133,6 +135,61 @@ export function Card ({ children, className = '' }: { children: ReactNode; class
 /** The small print under a table or a figure. */
 export function Note ({ children }: { children: ReactNode }) {
   return <p className="max-w-3xl text-sm leading-relaxed text-muted">{children}</p>
+}
+
+/**
+ * One number, said once.
+ *
+ * Four screens were each drawing this by hand and had drifted — different type
+ * sizes, three different label treatments, two different grids. It is the same
+ * object everywhere it appears: a figure, what it counts, and optionally the raw
+ * value underneath for anyone who wants to check the rounding.
+ *
+ * `size="lg"` is the landing page, where a stat is the loudest thing on screen.
+ */
+export function Stat ({
+  value,
+  label,
+  tone = 'text-foreground',
+  hint,
+  title,
+  help,
+  size = 'md',
+  delay = 0
+}: {
+  value: ReactNode
+  label: string
+  tone?: string
+  hint?: ReactNode
+  title?: string
+  /** A glossary term, when the label alone does not say what is being counted. */
+  help?: Term
+  size?: 'md' | 'lg'
+  delay?: number
+}) {
+  return (
+    <div
+      className="count-in rise rounded-xl border border-border bg-panel p-4 sm:p-5"
+      style={{ animationDelay: `${delay}ms` }}
+      title={title}
+    >
+      <div className={`font-bold tabular-nums ${size === 'lg' ? 'text-4xl sm:text-5xl' : 'text-3xl'} ${tone}`}>
+        {value}
+      </div>
+      <div className="mt-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+        {label}
+        {help && <Help of={help} />}
+      </div>
+      {hint && <div className="mt-2 font-mono text-xs text-muted">{hint}</div>}
+    </div>
+  )
+}
+
+/** A row of them: two across on a phone, three or four on a desk. */
+export function StatRow ({ children, cols = 4 }: { children: ReactNode; cols?: 3 | 4 }) {
+  return (
+    <div className={`grid grid-cols-2 gap-3 ${cols === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-4'}`}>{children}</div>
+  )
 }
 
 /** A page button. Two tones, and no component writes the classes itself. */
