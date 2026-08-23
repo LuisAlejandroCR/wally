@@ -1,5 +1,6 @@
 import recorded from '@/data/policies.json'
 import { formatAmount, liveApiUrl } from '@/lib/cerrojo'
+import { policyNameEn, reasonEn, ruleNameEn } from '@/lib/english'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,9 +93,9 @@ export default async function PoliciesPage () {
                   <tr key={`${p.id}-${r.nombre}`} className="border-b border-border/60 last:border-0 align-top">
                     <td className="p-3">
                       <code className="font-mono text-xs">{p.id}</code>
-                      <div className="text-xs text-muted">{p.nombre}</div>
+                      <div className="text-xs text-muted">{policyNameEn(p.id) ?? p.nombre}</div>
                     </td>
-                    <td className="p-3 font-mono text-xs">{r.nombre}</td>
+                    <td className="p-3 font-mono text-xs">{ruleNameEn(r.nombre) ?? r.nombre}</td>
                     <td className="p-3">
                       <span
                         className={`rounded-full border px-2.5 py-1 text-xs font-bold ${
@@ -107,7 +108,26 @@ export default async function PoliciesPage () {
                       </span>
                       <div className="mt-1 font-mono text-[0.7rem] text-muted">{r.operacion}</div>
                     </td>
-                    <td className="p-3 text-muted">{r.razon ?? '—'}</td>
+                    <td className="p-3">
+                      {r.razon === null ? (
+                        <span className="text-muted">—</span>
+                      ) : (
+                        (() => {
+                          const english = reasonEn(p.id, r.nombre, r.razon)
+                          return (
+                            <>
+                              <span className="text-foreground">{english ?? r.razon}</span>
+                              {english && (
+                                <span className="mt-1 block text-xs text-muted">
+                                  <span className="uppercase tracking-wider">engine, verbatim:</span>{' '}
+                                  <span lang="es">{r.razon}</span>
+                                </span>
+                              )}
+                            </>
+                          )
+                        })()
+                      )}
+                    </td>
                   </tr>
                 ))
               )}

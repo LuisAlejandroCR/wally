@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import clean from '@/data/run-clean.json'
 import type { Receipt } from '@/lib/cerrojo'
-import { Checks, ReceiptTable, RunMeta, Totals } from '@/components/Receipt'
+import { Checks, FeeNote, ReceiptTable, RunMeta, Totals } from '@/components/Receipt'
 import { liveApiUrl } from '@/lib/cerrojo'
 
 const receipt = clean as unknown as Receipt
@@ -57,10 +57,12 @@ export default function Home () {
 
         <Totals receipt={receipt} />
         <ReceiptTable receipt={receipt} />
+        <FeeNote receipt={receipt} />
 
         <p className="text-sm text-muted">
-          The reasons are shown exactly as the engine wrote them, in Spanish, because rewriting a verdict in the
-          interface is how a fake lock starts. {receipt.totals.ejecutadas} + {receipt.totals.denegadas} +{' '}
+          The engine writes its reasons in Spanish, the language the payroll instruction is given in. Each one is
+          rendered in English here with the engine&apos;s own sentence kept underneath, marked verbatim: the interface
+          translates, it never restates a verdict. {receipt.totals.ejecutadas} + {receipt.totals.denegadas} +{' '}
           {receipt.totals.no_intentadas} = {receipt.totals.lineas}, and the receipt is only issued when that adds up.
         </p>
       </section>

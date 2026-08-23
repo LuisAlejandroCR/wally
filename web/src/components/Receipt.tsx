@@ -1,5 +1,6 @@
 import type { Receipt, ReceiptLine } from '@/lib/cerrojo'
 import { ESTADO_LABEL, formatAmount, shortAddress } from '@/lib/cerrojo'
+import { checkDetailEn, checkLabelEn, quoteNoteEn, reasonEn, ruleNameEn, whyEn } from '@/lib/english'
 
 const PILL: Record<string, string> = {
   ejecutada: 'bg-green-bg text-green border-green/40',
@@ -91,14 +92,29 @@ export function Totals ({ receipt }: { receipt: Receipt }) {
   )
 }
 
+/**
+ * The engine writes its reasons in Spanish. The English rendering is shown
+ * first, and the engine's own sentence stays underneath, marked as verbatim —
+ * so the page reads in English without any verdict being restated.
+ */
+function Verbatim ({ text }: { text: string }) {
+  return (
+    <span className="mt-1 block text-xs text-muted">
+      <span className="uppercase tracking-wider">engine, verbatim:</span> <span lang="es">{text}</span>
+    </span>
+  )
+}
+
 function Why ({ line }: { line: ReceiptLine }) {
   if (line.policy) {
+    const english = reasonEn(line.policy.id, line.policy.rule, line.policy.reason)
     return (
       <div>
         <code className="mr-2 rounded bg-panel-high px-1.5 py-0.5 font-mono text-[0.78rem] text-red">
-          {line.policy.id} / {line.policy.rule}
+          {line.policy.id} / {ruleNameEn(line.policy.rule) ?? line.policy.rule}
         </code>
-        <span className="text-muted">{line.policy.reason}</span>
+        <span className="text-foreground">{english ?? line.policy.reason}</span>
+        {english && <Verbatim text={line.policy.reason} />}
       </div>
     )
   }
@@ -110,7 +126,14 @@ function Why ({ line }: { line: ReceiptLine }) {
       </div>
     )
   }
-  return <span className="text-muted">{line.why ?? line.notaPlanner ?? '—'}</span>
+  const raw = line.why ?? line.notaPlanner ?? null
+  const english = whyEn(raw)
+  return (
+    <div>
+      <span className="text-foreground">{english ?? raw ?? '—'}</span>
+      {english && raw && <Verbatim text={raw} />}
+    </div>
+  )
 }
 
 export function ReceiptTable ({ receipt }: { receipt: Receipt }) {
@@ -123,7 +146,7 @@ export function ReceiptTable ({ receipt }: { receipt: Receipt }) {
             <th className="p-3 font-semibold">Verdict</th>
             <th className="p-3 font-semibold">Recipient</th>
             <th className="p-3 text-right font-semibold">Amount</th>
-            <th className="p-3 font-semibold">Why — verbatim from the policy engine</th>
+            <th className="p-3 font-semibold">Why — as the policy engine reported it</th>
           </tr>
         </thead>
         <tbody>
@@ -154,6 +177,18 @@ export function ReceiptTable ({ receipt }: { receipt: Receipt }) {
   )
 }
 
+/** The fee note is the same sentence on every estimated line: print it once. */
+export function FeeNote ({ receipt }: { receipt: Receipt }) {
+  const line = receipt.lines.find((l) => l.quoteExacto === false && l.quoteNota)
+  if (!line) return null
+  const english = quoteNoteEn(line.quoteNota)
+  return (
+    <p className="text-sm text-muted">
+      <span className="text-amber">Fees are estimates.</span> {english ?? line.quoteNota}
+    </p>
+  )
+}
+
 export function Checks ({ receipt }: { receipt: Receipt }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -164,8 +199,9 @@ export function Checks ({ receipt }: { receipt: Receipt }) {
               <VerdictIcon estado={c.ok ? 'ejecutada' : 'denegada'} />
             </span>
             <code className="font-mono text-sm">{c.name}</code>
+            {checkLabelEn(c.name) && <span className="text-sm text-muted">— {checkLabelEn(c.name)}</span>}
           </div>
-          <p className="mt-1 text-sm text-muted">{c.detail}</p>
+          <p className="mt-1 text-sm text-muted">{checkDetailEn(c.name, c.detail) ?? c.detail}</p>
         </div>
       ))}
     </div>
