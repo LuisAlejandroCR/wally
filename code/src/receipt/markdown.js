@@ -17,7 +17,12 @@ export function reciboMarkdown (recibo) {
   L.push(`**Corrida:** \`${recibo.run.id}\` · **Modo:** ${recibo.run.mode} · **Red:** ${recibo.run.network ?? '—'} · **Token:** ${simbolo} (${d} dec)`)
   if (recibo.run.inputFile) L.push(`**Entrada:** \`${recibo.run.inputFile}\` · sha256 \`${(recibo.run.inputSha256 ?? '').slice(0, 16)}…\``)
   if (recibo.run.planner) {
-    L.push(`**Planner:** ${recibo.run.planner.used ? `LLM \`${recibo.run.planner.model}\`` : 'reglas deterministas (`--no-llm`)'}${recibo.run.planner.retries ? ` · reintentos: ${recibo.run.planner.retries}` : ''}`)
+    const p = recibo.run.planner
+    // El recibo nombra el planner que armo el plan (`rules` | `llm`), nunca una bandera del CLI:
+    // sigue siendo cierto aunque las banderas se renombren.
+    const modo = p.modo ?? (p.used ? 'llm' : 'rules')
+    const etiqueta = p.used ? `LLM \`${p.model}\`` : 'reglas deterministas'
+    L.push(`**Planner:** \`${modo}\` · ${etiqueta}${p.retries ? ` · reintentos: ${p.retries}` : ''}`)
   }
   L.push('')
 

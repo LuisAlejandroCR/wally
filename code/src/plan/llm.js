@@ -36,7 +36,7 @@ export async function planificarConLLM ({ instruccion, nomina, cfg, periodo, cli
     throw new CerrojoError(
       'E_PLANNER_SIN_CLAVE',
       'El planner LLM necesita ANTHROPIC_API_KEY y no hay ninguna configurada.',
-      'Corre con --no-llm para armar el plan por reglas deterministas, o define ANTHROPIC_API_KEY en code/.env',
+      'Corre `cerrojo run` sin la bandera --llm para armar el plan por reglas deterministas, o define ANTHROPIC_API_KEY en code/.env',
       'plan'
     )
   }

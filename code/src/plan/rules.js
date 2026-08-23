@@ -4,7 +4,7 @@ import { EsquemaPlan } from './schema.js'
  * Planner determinista: sin modelo, sin red, sin sorpresas.
  *
  * Existe para siempre, no solo como respaldo: es la prueba de que el cerrojo no
- * depende del LLM. `cerrojo run --no-llm` corre todo el sistema sin encender
+ * depende del LLM. `cerrojo run` sin `--llm` corre todo el sistema sin encender
  * ningun modelo.
  */
 export function planificarPorReglas ({ instruccion, nomina, cfg, periodo }) {

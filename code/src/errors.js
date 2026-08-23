@@ -48,7 +48,7 @@ export const E = {
   planInvalido: (detalle) => new CerrojoError(
     'E_PLAN_INVALID',
     `El planner no produjo un plan valido: ${detalle}`,
-    'Corre con --no-llm para armar el plan por reglas deterministas.',
+    'Corre `cerrojo run` sin la bandera --llm para armar el plan por reglas deterministas.',
     'plan'
   ),
   sumaNoCuadra: (detalle) => new CerrojoError(
