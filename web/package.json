@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "inputs": "node scripts/build-inputs.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.8.0",
