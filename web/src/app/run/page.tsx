@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import clean from '@/data/run-clean.json'
 import type { Receipt } from '@/lib/cerrojo'
-import { Checks, ExplorerNote, FeeNote, ReceiptTable, RunMeta, Totals } from '@/components/Receipt'
+import { Checks, DryRunNote, FeeNote, ReceiptTable, RunMeta, Totals } from '@/components/Receipt'
 import { Reveal } from '@/components/Reveal'
 import { liveApiUrl } from '@/lib/cerrojo'
 
@@ -40,7 +40,7 @@ export default function RunPage () {
 
         <Totals receipt={receipt} />
         <ReceiptTable receipt={receipt} />
-        <ExplorerNote network={receipt.run.network} />
+        <DryRunNote network={receipt.run.network} />
         <FeeNote receipt={receipt} />
 
         <p className="text-sm text-muted">

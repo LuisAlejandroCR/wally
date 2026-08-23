@@ -1,42 +1,22 @@
 import type { Receipt, ReceiptLine } from '@/lib/cerrojo'
 import { explorerAddressUrl, formatAmount, formatAmount2, shortAddress, statusLabel } from '@/lib/cerrojo'
+import { CopyAddress } from '@/components/CopyAddress'
 import { checkDetailEn, checkLabelEn, quoteNoteEn, reasonEn, ruleNameEn, whyEn } from '@/lib/english'
 
 /**
- * A recipient, short enough to read and clickable enough to check.
+ * Why the recipients are not links.
  *
- * The label is the truncated address so a twelve-line table stays readable; the
- * full value is in the href and the tooltip, on the explorer for the network
- * the receipt itself declares.
+ * Nothing was broadcast and the payroll rows are invented, so no explorer has
+ * an entry for any of them. Linking to an empty page would look like a broken
+ * demo; the addresses copy instead. The one real object here is the token
+ * contract, linked in the run metadata.
  */
-export function AddressLink ({ address, network }: { address: string | null; network: string }) {
-  const url = explorerAddressUrl(address, network)
-  if (!address || !url) return <span className="font-mono text-xs text-muted">{shortAddress(address)}</span>
-
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      title={`${address} — open on ${network}. Dry run: no transaction was broadcast, so the explorer lists none.`}
-      className="font-mono text-xs text-blue underline decoration-dotted underline-offset-4 transition-colors hover:decoration-solid"
-    >
-      {shortAddress(address)}
-    </a>
-  )
-}
-
-/**
- * Said once, under the table, because an empty explorer page reads as a broken
- * demo unless you know why it is empty — and why it is empty is the point.
- */
-export function ExplorerNote ({ network }: { network: string }) {
+export function DryRunNote ({ network }: { network: string }) {
   return (
     <p className="text-sm text-muted">
-      Recipients link to {network}. They show no transactions on purpose:{' '}
-      <span className="text-foreground">this run is a dry run</span>, so nothing was broadcast, and the payroll rows
-      are synthetic addresses. What the lock approved was simulated; what it refused never became a transaction to
-      look up.
+      <span className="text-foreground">Dry run.</span> Nothing was broadcast on {network}, and the payroll rows are
+      synthetic addresses, so none of them exists on a block explorer — click one to copy it instead. The token
+      contract below is the real deployment.
     </p>
   )
 }
@@ -215,7 +195,7 @@ export function ReceiptTable ({ receipt }: { receipt: Receipt }) {
                 <StatusPill estado={line.estado} txHash={line.txHash ?? null} />
               </td>
               <td className="p-3">
-                <AddressLink address={line.to} network={receipt.run.network} />
+                <CopyAddress address={line.to} />
               </td>
               <td className="p-3 text-right font-mono tabular-nums">
                 {/* A line with no amount carries no currency either: the CSV never said one. */}

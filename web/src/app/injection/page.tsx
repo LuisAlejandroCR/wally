@@ -1,7 +1,8 @@
 import clean from '@/data/run-clean.json'
 import poisoned from '@/data/run-poisoned.json'
 import type { Receipt } from '@/lib/cerrojo'
-import { AddressLink, Amount, ExplorerNote, StatusPill, VerdictIcon } from '@/components/Receipt'
+import { Amount, DryRunNote, StatusPill, VerdictIcon } from '@/components/Receipt'
+import { CopyAddress } from '@/components/CopyAddress'
 import { Reveal } from '@/components/Reveal'
 
 const limpia = clean as unknown as Receipt
@@ -117,7 +118,7 @@ export default function InjectionPage () {
                     )}
                   </td>
                   <td className="p-3">
-                    <AddressLink address={r.to} network={limpia.run.network} />
+                    <CopyAddress address={r.to} />
                   </td>
                   <td className="p-3 text-right font-mono tabular-nums">
                     <Amount base={r.amount} decimals={r.decimals} token={r.token} />
@@ -133,7 +134,7 @@ export default function InjectionPage () {
             </tbody>
           </table>
         </div>
-        <ExplorerNote network={limpia.run.network} />
+        <DryRunNote network={limpia.run.network} />
         <p className="text-sm text-muted">
           Both receipts came from <code className="font-mono">node src/cli.js run --json</code> on a fresh daily
           ledger. <code className="font-mono">cerrojo inyeccion</code> repeats the comparison with a live model and
