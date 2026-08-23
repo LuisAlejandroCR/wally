@@ -117,6 +117,49 @@ export function VoucherChain () {
 }
 
 /**
+ * The endpoint, spelled out so it can be copied.
+ *
+ * A transcript proves what happened once; a URL lets someone check for
+ * themselves, which is a different and better thing to offer. Left open because
+ * none of the nine tools can send, approve or read the seed.
+ */
+export function RemoteEndpoint () {
+  const config = JSON.stringify(
+    { mcpServers: { cerrojo: { type: 'http', url: mcp.remote.url } } },
+    null,
+    2
+  )
+  return (
+    <div className="space-y-4">
+      <p className="max-w-3xl leading-relaxed text-muted">
+        The same nine tools are served over Streamable HTTP. Drop this into Claude Code&apos;s{' '}
+        <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-sm">.mcp.json</code> or Claude
+        Desktop&apos;s <code className="rounded bg-panel-high px-1.5 py-0.5 font-mono text-sm">claude_desktop_config.json</code>,
+        restart the client, and your agent is talking to the engine behind this page.
+      </p>
+
+      <pre className="overflow-x-auto rounded-lg border border-border bg-panel-high p-3.5 font-mono text-xs leading-relaxed">
+        {config}
+      </pre>
+
+      <div className="rounded-xl border border-gold/50 bg-gold-bg p-4">
+        <p className="text-sm font-semibold">Then ask it for something the lock has an opinion about:</p>
+        <p className="mt-2 text-sm italic leading-relaxed text-muted">
+          &ldquo;Using the cerrojo tools: what are the payroll policies, how much of today&apos;s budget is left, and
+          what happens if I try to send 900 USDT to 0x…dEaD?&rdquo;
+        </p>
+        <p className="mt-2 text-sm leading-relaxed">
+          It comes back with <strong>DENY</strong>, the policy, the rule and the reason. Tell it to send the money
+          anyway and it cannot: there is no tool that sends, and none that approves.
+        </p>
+      </div>
+
+      <Note>{mcp.remote.note}</Note>
+    </div>
+  )
+}
+
+/**
  * The one live transfer.
  *
  * Everything else on this site is a decision with nothing broadcast behind it,

@@ -19,6 +19,7 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
   const [csv, setCsv] = useState(PAYROLLS[0].value)
   const [instruction, setInstruction] = useState('paga la nomina de agosto')
   const [planner, setPlanner] = useState<'rules' | 'llm'>('rules')
+  const [resetDay, setResetDay] = useState(true)
   const [busy, setBusy] = useState(false)
   const [receipt, setReceipt] = useState<Receipt | null>(null)
   const [error, setError] = useState<ApiError['error'] | null>(null)
@@ -30,7 +31,7 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
       const r = await fetch('/api/live/run', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ csv, instruccion: instruction, planner })
+        body: JSON.stringify({ csv, instruccion: instruction, planner, reiniciar_dia: resetDay })
       })
       const data = await r.json()
       if (!r.ok) {
@@ -105,6 +106,26 @@ export function OperatorPanel ({ liveConfigured }: { liveConfigured: boolean }) 
           </div>
           <p className="text-xs text-muted">Same lock either way: the model proposes, the engine decides.</p>
         </div>
+
+        {/* One payroll uses 1,296 of the 1,500 daily budget, so the second visitor
+            would otherwise find everything refused by `cap-diario` — correct, and
+            impossible to read as anything but broken. This zeroes our own counter
+            and nothing else: the caps, the allowlist and the token still decide. */}
+        <label className="flex items-start gap-2.5 text-sm">
+          <input
+            type="checkbox"
+            checked={resetDay}
+            onChange={(e) => setResetDay(e.target.checked)}
+            className="mt-0.5 size-4 accent-navy"
+          />
+          <span>
+            Zero today&apos;s counter first
+            <span className="mt-0.5 block text-xs text-muted">
+              A full payroll spends 1,296 of the 1,500 daily budget. Untick it and run twice to watch the daily cap
+              refuse the second run.
+            </span>
+          </span>
+        </label>
 
         <button
           type="button"

@@ -2,6 +2,11 @@
   "server": "cerrojo",
   "version": "0.1.0",
   "transport": "stdio",
+  "remote": {
+    "url": "https://oak-tba-dated-modules.trycloudflare.com/mcp",
+    "transport": "streamable-http",
+    "note": "A live demo endpoint pointing at one laptop. It may rotate; the repository runs the same nine tools locally with npm run mcp:http."
+  },
   "captured": "2026-08-23T07:05:38Z",
   "note": "Captured from a real MCP session against src/mcp/server.js. The JSON below is what the server answered, unedited.",
   "tools": [

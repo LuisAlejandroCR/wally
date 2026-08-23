@@ -171,6 +171,12 @@ async function correrNomina ({ cfg, cuerpo }) {
     modo: 'dry-run', // no hay forma de pedir 'live' por HTTP. A proposito.
     planner: cuerpo.planner === 'llm' ? 'llm' : 'rules',
     conDemo: Boolean(cuerpo.demo),
+    // Poner el acumulado del dia en cero antes de correr. Es lo unico que esta
+    // API puede relajar, y solo afloja un contador nuestro: los topes, la
+    // allowlist y el token siguen decidiendo igual. Sin esto, la segunda persona
+    // que abre la demo encuentra el dia gastado y todo denegado por `cap-diario`,
+    // que es correcto y no se entiende.
+    resetDia: Boolean(cuerpo.reiniciar_dia),
     cfg
   })
 

@@ -7,7 +7,8 @@ import { policyNameEn, reasonEn, ruleNameEn } from '@/lib/english'
 import { Amount, Checks, DryRunNote, FeeNote, ReceiptTable, RunMeta, StatusPill, Totals, VerdictIcon } from '@/components/Receipt'
 import { CopyAddress } from '@/components/CopyAddress'
 import { ProofTabs } from '@/components/ProofTabs'
-import { AgentTools, LiveTransfer, McpTranscript, VoucherChain } from '@/components/AgentChannel'
+import { AgentTools, LiveTransfer, McpTranscript, RemoteEndpoint, VoucherChain } from '@/components/AgentChannel'
+import { PolicyProbe } from '@/components/PolicyProbe'
 import { Card, Cta, NextSteps, Note, Page, PageHeader, Section } from '@/components/Page'
 
 export const dynamic = 'force-dynamic'
@@ -304,6 +305,13 @@ export default async function ProofPage () {
         The daily cap keeps its own counter: <code className="font-mono">rule.onSuccess</code> is in the WDK schema
         but ignored at runtime in 1.0.0-beta.16.
       </Note>
+
+      <Sub>Now point one at it yourself</Sub>
+      <p className="max-w-3xl text-muted">
+        No account needed. Type any address and any amount; the engine answers with the policy, the rule and its own
+        reason. Deciding costs no network, so nothing you do here can be sent, queued or undone.
+      </p>
+      <PolicyProbe liveConfigured={live} />
     </Section>
   )
 
@@ -318,6 +326,9 @@ export default async function ProofPage () {
       aside="Captured from stdio."
     >
       <McpTranscript />
+
+      <Sub>Point your own agent at it</Sub>
+      <RemoteEndpoint />
 
       <Sub>What the server registered</Sub>
       <AgentTools />

@@ -14,10 +14,15 @@ Aleph Hackathon 2026 · WDK Track · built on [`@tetherto/wdk`](https://www.npmj
 | [`/proof#receipt`](https://cerrojo-app.vercel.app/proof#receipt) | a real receipt: 12 lines, 7 paid, 2 refused by rule, 3 set aside |
 | [`/proof#injection`](https://cerrojo-app.vercel.app/proof#injection) | the same payroll with three cells rewritten to attack the model |
 | [`/proof#agent`](https://cerrojo-app.vercel.app/proof#agent) | a real MCP session: an agent asking three times and never getting paid |
-| [`/operator`](https://cerrojo-app.vercel.app/operator) | run a payroll yourself — one click with Google, dry-run only |
+| [`/proof#policies`](https://cerrojo-app.vercel.app/proof#policies) | **ask the lock about any payment you like** — your address, your amount, live |
+| [`/operator`](https://cerrojo-app.vercel.app/operator) | run a whole payroll — one click with Google, dry-run only |
 
-The first three need no account. `/operator` is signed-in because it drives one shared engine; it
-still cannot send funds, because this deployment exposes no endpoint that executes.
+Everything except `/operator` is open: reading and deciding need no account, because deciding moves
+nothing. Running a payroll writes a receipt and spends the day's budget, so that one asks you to sign
+in. Nothing on the site can send funds — this deployment exposes no endpoint that executes.
+
+**Have an MCP client?** Point it at the live engine and drive the nine tools yourself:
+[configuration below](#point-your-own-agent-at-it-without-cloning).
 
 ---
 
@@ -364,6 +369,48 @@ Approving is not a rubber stamp on the agent's verdict. Six things hold:
 So the worst an argumentative CSV or a talked-into-it model can achieve is a voucher sitting in a
 queue with a person reading it. And if that person says yes to something over the cap, the policy
 engine still says no.
+
+### Point your own agent at it, without cloning
+
+The same nine tools are served over Streamable HTTP, so any MCP client can reach the live engine.
+Add this and restart the client:
+
+```json
+{
+  "mcpServers": {
+    "cerrojo": {
+      "type": "http",
+      "url": "https://oak-tba-dated-modules.trycloudflare.com/mcp"
+    }
+  }
+}
+```
+
+Claude Code reads `.mcp.json` in the working directory; Claude Desktop reads
+`claude_desktop_config.json`. Then ask it something the lock has an opinion about:
+
+> *Using the cerrojo tools: what are the payroll policies, how much of today's budget is left, and
+> what happens if I try to send 900 USDT to `0x000000000000000000000000000000000000dEaD`?*
+
+It will come back with `DENY`, the policy id, the rule name and the engine's own reason. Ask it to
+send the money anyway and it will not be able to: there is no tool that sends, and none that
+approves.
+
+That URL is a **live demo endpoint pointing at one laptop**, so treat it as temporary — it may rotate
+or go quiet. The durable version is two commands from a clean clone:
+
+```bash
+npm run mcp:http                       # http://127.0.0.1:8788/mcp, or
+npm run mcp                            # the same nine tools over stdio
+```
+
+The repository's own [`.mcp.json`](.mcp.json) already wires the stdio one.
+
+**Why an open endpoint is not a mistake here**, in the same order the tools are registered: no tool
+sends, no tool approves, no tool returns the seed, and the caps and allowlist are WDK policies rather
+than instructions a caller could argue with. The most an anonymous stranger can achieve is a voucher
+in a queue on someone else's machine, waiting for a human who reads it first. Each request gets its
+own server, transport and wallet session, so no two callers ever share state.
 
 ## The contract
 

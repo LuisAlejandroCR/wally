@@ -9,11 +9,16 @@ import { liveApiUrl } from '@/lib/cerrojo'
  * proxied path that sends funds, because the Cerrojo API has no such endpoint:
  * `--live` exists only in the CLI and needs two explicit flags together.
  */
-const ALLOWED: Record<string, { path: string; method: 'GET' | 'POST' }> = {
-  health: { path: '/salud', method: 'GET' },
-  policies: { path: '/politicas', method: 'GET' },
-  day: { path: '/estado-diario', method: 'GET' },
-  simulate: { path: '/simular', method: 'POST' },
+const ALLOWED: Record<string, { path: string; method: 'GET' | 'POST'; open?: boolean }> = {
+  health: { path: '/salud', method: 'GET', open: true },
+  policies: { path: '/politicas', method: 'GET', open: true },
+  day: { path: '/estado-diario', method: 'GET', open: true },
+  // Asking the lock about one payment moves nothing: no plan, no receipt, no
+  // ledger, no network. Putting an account in front of that would be asking
+  // people to register in order to be told "no", so it stays open.
+  simulate: { path: '/simular', method: 'POST', open: true },
+  // Running a payroll writes a receipt and moves the day's counter, and it is
+  // the expensive one. That still needs a signed-in operator.
   run: { path: '/correr', method: 'POST' }
 }
 
@@ -28,16 +33,19 @@ export async function POST (request: Request, { params }: { params: Promise<{ ac
     return fail(404, 'E_ACCION', `No proxied action named "${action}".`, `Use one of: ${Object.keys(ALLOWED).join(', ')}.`)
   }
 
-  // Reading is public; making the engine work is not. The gate is here as well
-  // as on the page, because a route handler is reachable without the page.
-  const { userId } = await auth()
-  if (!userId) {
-    return fail(
-      401,
-      'E_SIN_SESION',
-      'This action needs a signed-in operator.',
-      'Sign in from the Operator page. The public pages need no account.'
-    )
+  // Reading and deciding are public; making the engine work is not. The gate is
+  // here as well as on the page, because a route handler is reachable without
+  // the page.
+  if (!spec.open) {
+    const { userId } = await auth()
+    if (!userId) {
+      return fail(
+        401,
+        'E_SIN_SESION',
+        'This action needs a signed-in operator.',
+        'Sign in from the Operator page. Everything that only reads or decides is open.'
+      )
+    }
   }
 
   const base = liveApiUrl()

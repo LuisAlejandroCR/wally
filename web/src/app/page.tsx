@@ -181,7 +181,9 @@ export default function Home () {
           That asymmetry is the safety model: the channel that proposes and the channel that approves are different
           programs, and only one of them has a person in it. A prompt cannot pay itself.
         </Note>
-        <Cta href="/proof#agent">Read a real MCP session →</Cta>
+        <Cta href="/proof#agent" tone="primary">
+          Point your own agent at it →
+        </Cta>
       </Section>
 
       <Section

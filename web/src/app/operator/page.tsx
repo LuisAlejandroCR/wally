@@ -30,7 +30,7 @@ export default async function OperatorPage () {
         <Section
           tone="panel"
           title="Sign in to run a payroll"
-          lead="One click with Google. Every other page — the receipt, the injection test, the agent channel, the five policies — is open without an account."
+          lead="One click with Google. Everything that only reads or decides is open without an account — including the live probe on The proof, where you can ask the lock about any payment you like."
         >
           <SignInButton mode="modal">
             <button className="rounded-full bg-gold px-5 py-2.5 font-semibold text-navy shadow-[0_14px_30px_-12px_rgba(233,162,59,0.75)] transition-colors hover:bg-gold-2">
