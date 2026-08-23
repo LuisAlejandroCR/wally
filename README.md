@@ -288,8 +288,39 @@ request, always schema-validated) → **policy** (the lock: WDK policies and the
 states, four checks, JSON and markdown).
 
 Three interfaces call those five layers and none re-decides anything: the **CLI** — the only one that
-can send, and only with `--live --confirmo` — the **MCP server** (five tools, none of them a send
-tool) and the **HTTP API** (no endpoint that sends). [Details](DEV.md#architecture).
+can send, and only with `--live --confirmo` — the **MCP server** (nine tools, none of them a send
+tool and none of them an approve tool) and the **HTTP API** (no endpoint that sends).
+[Details](DEV.md#architecture).
+
+## Giving an agent the wallet
+
+An agent connected over MCP gets a wallet it can look at and reason about, and cannot spend from.
+Nine tools: read the policies, read the treasury balance, quote a fee, simulate a payment, run a
+payroll in dry-run, read the day's accumulator, re-read a receipt, **propose** a payment, and check
+what happened to a proposal.
+
+The tool that is missing is the point. There is no `approve`. A proposal becomes a **voucher** and a
+voucher only moves when a person types this in their own terminal:
+
+```bash
+node src/cli.js vales            # what the agent has proposed, and why
+node src/cli.js aprobar <id>     # dry-run; add --live --confirmo to really send
+```
+
+Approving is not a rubber stamp on the agent's verdict. Six things hold:
+
+| | |
+|---|---|
+| **Frozen** | the order is sealed with a sha256 of network + token + recipient + amount; a voucher edited between proposal and signature fails its fingerprint |
+| **Re-validated** | policy runs again at approval time. A voucher approved ten minutes ago that no longer fits today's cap is denied anyway |
+| **Short-lived** | a voucher expires after 15 minutes, so an old approval cannot be replayed |
+| **Single use** | executing consumes it; a second `aprobar` exits 1 and the ledger does not move |
+| **No secrets** | a voucher carries nothing derived from the seed |
+| **On the record** | a voucher denied after a human approved it keeps both facts |
+
+So the worst an argumentative CSV or a talked-into-it model can achieve is a voucher sitting in a
+queue with a person reading it. And if that person says yes to something over the cap, the policy
+engine still says no.
 
 ## The contract
 

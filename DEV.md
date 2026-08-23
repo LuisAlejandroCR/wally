@@ -21,26 +21,52 @@ Three interfaces call those same five layers, and none of them re-decides anythi
 | Surface | Start it with | Can it send |
 |---|---|---|
 | CLI | `node src/cli.js run` | only with `--live --confirmo` together |
-| MCP server (stdio) | `node src/mcp/server.js` | no — `modo: 'dry-run'` is hard-coded at the call site |
+| MCP server (stdio) | `node src/mcp/server.js` | no — `modo: 'dry-run'` is hard-coded at the call site, and no tool approves a voucher |
 | HTTP API | `node src/cli.js serve` | no — no endpoint exists that sends |
 
 `--live` on its own exits with an error and pays nothing.
 
 ### MCP server
 
-Five tools, and none of them is a send tool:
+Nine tools. None of them sends, and none of them approves:
 
 | Tool | Returns |
 |---|---|
-| `cerrojo_simular_pago` | the verdict for one recipient and one integer amount: `decision`, `policy_id`, `matched_rule`, `reason`, plus the full `trace` |
 | `cerrojo_politicas` | the active limits, rules and reasons, and how many recipients are allowed |
+| `cerrojo_saldo` | treasury native and token balance, plus today's remaining margin. Read through `toReadOnlyAccount()`, and optionally a real mainnet panel |
+| `cerrojo_cotizar` | the estimated fee for one transfer, marked exact or estimated. A quote is not a permission |
+| `cerrojo_simular_pago` | the verdict for one recipient and one integer amount: `decision`, `policy_id`, `matched_rule`, `reason`, plus the full `trace` |
 | `cerrojo_correr_nomina` | a whole payroll run: plan, verdicts, receipt in markdown or JSON |
 | `cerrojo_estado_diario` | spent, limit and remaining for the day |
 | `cerrojo_recibo_de` | an earlier run's receipt, by `runId` |
+| `cerrojo_proponer_pago` | on ALLOW, a **voucher** awaiting a human. On DENY, the reason and no voucher |
+| `cerrojo_estado_vale` | what happened to a voucher, or the queue of pending ones. Looking does not move it |
 
-An agent holding all five still cannot exceed a limit, pay an unlisted address, or read the seed —
+An agent holding all nine still cannot exceed a limit, pay an unlisted address, or read the seed —
 not because it was asked not to, but because no tool does it and the engine refuses regardless.
 Asserted over a real stdio transport in `code/tests/mcp.test.js`.
+
+### Vouchers: the human step
+
+`cerrojo_proponer_pago` is where an agent stops. It writes a voucher to
+`state/vales/<id>.json` and returns the command a person has to type. Approving exists only in the
+CLI — `cerrojo vales`, `cerrojo aprobar <id>`, `cerrojo rechazar <id>` — which is the whole safety
+model: a prompt cannot pay itself, because the tool it would need is not on its side of the wire.
+
+`src/vales.js` holds six properties, each with a test in `code/tests/vales.test.js`:
+
+| Property | How |
+|---|---|
+| Frozen | sha256 over network + token + recipient + amount, checked again before execution |
+| Re-validated | `ejecutarVale` calls `simulate.transfer` again; the stored verdict is informational |
+| Short-lived | 15 minutes, then `expirado` on the next read |
+| Single use | `ejecutado` cannot be re-approved; the second `aprobar` exits 1 |
+| No secrets | nothing derived from the seed is written to a voucher |
+| On the record | a voucher denied after approval keeps `aprobadoEn` next to the denial |
+
+The re-validation is the one worth reading the code for. A human approving a voucher does not
+override the engine: if the day's accumulator filled up in between, `aprobar` prints
+`Revalidado DENY` and the voucher closes as `denegado` with the policy that stopped it.
 
 ### HTTP API
 
@@ -306,7 +332,8 @@ what nobody thought to type — the seed is printed on every run and can be pinn
 | `invariantes.test.js` | fourteen properties: the totals always balance; nothing is paid off the allowlist or over the per-transfer limit; the day's total never exceeds the daily limit; every refusal names a policy, rule and reason; a dry run never yields a transaction hash; **lowering a limit or shortening the allowlist never pays more**; poisoning every description changes no decision; and what `simulate` says it will refuse, `transfer` actually throws |
 | `policy.test.js` | the Proxy is in place; each of the five policies allows and denies correctly with the RPC dead; `sendTransaction` and `approve` are default-denied; a denied live `transfer` throws `PolicyViolationError` carrying `policyId` |
 | `recibo.test.js` | the three states sum to the total; every refusal carries policy, rule and reason; **the poisoned CSV produces a receipt identical to the clean one**; a missing CSV yields a failure receipt rather than a stack trace; no receipt contains the seed or key material |
-| `mcp.test.js` | over a real stdio transport: no tool name suggests sending, an agent cannot pay off the allowlist or exceed the limit, and `cerrojo_politicas` leaks no secret |
+| `mcp.test.js` | over a real stdio transport: no tool name suggests sending **and none suggests approving**, an agent cannot pay off the allowlist or exceed the limit, a denied proposal leaves no voucher behind, an allowed one leaves a `propuesto` voucher that reading does not move, and neither `cerrojo_politicas` nor `cerrojo_saldo` leaks a secret |
+| `vales.test.js` | the human step as a property: a voucher is never born approved, an edited order fails its fingerprint, a lapsed one cannot be approved, an approved one is single use, and **a voucher a human approved is still denied if it no longer fits the daily cap** |
 | `planner.test.js` | the model's proposal is re-checked row by row against the CSV; a rewritten amount or address becomes an abstention, never a silent correction |
 | `cli.test.js` | spawns the real CLI: `--live` without `--confirmo` exits 1 and pays nothing, `run --json` emits a receipt that balances, `policy` works with no seed and no network, a missing CSV exits 1 with a typed code |
 | `api.test.js` | drives the HTTP API on an ephemeral port: `/salud` declares `dry-run`, `/simular` denies an off-allowlist recipient with the engine's own policy and rule, bad input is a typed 400 rather than a 500, and `/correr` produces a receipt that balances with no transaction hash on any line |
@@ -448,7 +475,9 @@ code/
 │   ├── eval/       golden set runner
 │   ├── api/        HTTP API
 │   ├── mcp/        MCP server
-│   ├── cli.js      run | eval | inyeccion | policy | doctor | serve | paridad | demo
+│   ├── cli.js      run | eval | inyeccion | policy | doctor | serve | paridad
+│   │               vales | aprobar | rechazar | demo
+│   ├── vales.js    payment vouchers: the human step between propose and sign
 │   ├── paridad.js  hands only approved lines to Tether's own wdk CLI, and reports
 │   ├── demo.js     the six-act scripted demo
 │   ├── config.js   environment, never holds the seed
