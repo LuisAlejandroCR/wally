@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { SignInButton } from '@clerk/nextjs'
 import { formatAmount } from '@/lib/cerrojo'
 import { policyNameEn, reasonEn, ruleNameEn } from '@/lib/english'
 
@@ -81,7 +82,11 @@ function toBaseUnits (input: string): { base: string } | { error: string } {
   return { base: digits }
 }
 
-export function PolicyProbe ({ liveConfigured }: { liveConfigured: boolean }) {
+export function PolicyProbe ({ liveConfigured, signedIn }: { liveConfigured: boolean; signedIn: boolean }) {
+  // Two different reasons the button can be off, and they are not the same
+  // thing to a reader: no engine wired to this deployment, or an engine that
+  // will only answer a signed-in operator. Each says so in its own words.
+  const ready = liveConfigured && signedIn
   const [recipient, setRecipient] = useState(ON_LIST)
   const [amount, setAmount] = useState('900')
   const [token, setToken] = useState('')
@@ -180,7 +185,7 @@ export function PolicyProbe ({ liveConfigured }: { liveConfigured: boolean }) {
               <button
                 key={p.label}
                 type="button"
-                disabled={busy || !liveConfigured}
+                disabled={busy || !ready}
                 onClick={() => ask(p)}
                 className="rounded-lg border border-border bg-panel-high px-3 py-2 text-left text-sm transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -233,15 +238,30 @@ export function PolicyProbe ({ liveConfigured }: { liveConfigured: boolean }) {
           <p className="text-xs text-muted">Any other contract is refused by name, whatever it is worth.</p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => ask()}
-          disabled={busy || !liveConfigured}
-          className="rounded-full bg-navy px-5 py-2.5 font-semibold text-panel transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {busy ? 'Asking…' : 'Ask the lock'}
-        </button>
-        {!liveConfigured && (
+        {signedIn ? (
+          <button
+            type="button"
+            onClick={() => ask()}
+            disabled={busy || !ready}
+            className="rounded-full bg-navy px-5 py-2.5 font-semibold text-panel transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {busy ? 'Asking…' : 'Ask the lock'}
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <SignInButton mode="modal">
+              <button className="rounded-full bg-gold px-5 py-2.5 font-semibold text-navy shadow-[0_14px_30px_-12px_rgba(233,162,59,0.75)] transition-colors hover:bg-gold-2">
+                Sign in to ask the lock
+              </button>
+            </SignInButton>
+            <p className="text-sm text-muted">
+              One click with Google. The account rations who may ask, not what the answer is: the caps, the
+              allowlist and the token pin are enforced by the policy engine either way, and signing in widens
+              none of them. The recorded verdicts above need no account at all.
+            </p>
+          </div>
+        )}
+        {signedIn && !liveConfigured && (
           <p className="text-sm text-amber">
             No engine URL on this deployment, so the button is off. The recorded verdicts are on{' '}
             <span className="font-semibold">The proof</span>.

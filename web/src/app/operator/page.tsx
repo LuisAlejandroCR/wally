@@ -33,8 +33,9 @@ export default async function OperatorPage () {
           title="Sign in to run a payroll"
           lead={
             <>
-              One click with Google. Everything that only reads or decides is open without an account — including the
-              live probe on The proof.
+              One click with Google. Every recorded verdict on The proof is open without an account — the receipt,
+              the injection comparison, the agent transcript and the five policies. What needs the account is asking
+              the live engine something new, here or with the probe on The proof.
               <Help title="Why an account at all?">
                 To keep one shared engine from being run by everyone at once. It widens nothing: this deployment has
                 no endpoint that executes, so the worst an authenticated run can do is write a dry-run receipt and

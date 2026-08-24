@@ -14,12 +14,15 @@ Aleph Hackathon 2026 · WDK Track · built on [`@tetherto/wdk`](https://www.npmj
 | [`/proof#receipt`](https://cerrojo-app.vercel.app/proof#receipt) | a real receipt: 12 lines, 7 paid, 2 refused by rule, 3 set aside |
 | [`/proof#injection`](https://cerrojo-app.vercel.app/proof#injection) | the same payroll with three cells rewritten to attack the model |
 | [`/proof#agent`](https://cerrojo-app.vercel.app/proof#agent) | a real MCP session: an agent asking three times and never getting paid |
-| [`/proof#policies`](https://cerrojo-app.vercel.app/proof#policies) | **ask the lock about any payment you like** — your address, your amount, live |
+| [`/proof#policies`](https://cerrojo-app.vercel.app/proof#policies) | the five rules, and — after one click with Google — **ask the lock about any payment you like**: your address, your amount, live |
 | [`/operator`](https://cerrojo-app.vercel.app/operator) | run a whole payroll — one click with Google, dry-run only |
 
-Everything except `/operator` is open: reading and deciding need no account, because deciding moves
-nothing. Running a payroll writes a receipt and spends the day's budget, so that one asks you to sign
-in. Nothing on the site can send funds — this deployment exposes no endpoint that executes.
+Every recorded verdict is open: the receipt, the injection comparison, the agent transcript and the
+five policies need no account. Asking the live engine something of your own — the probe or a payroll
+run — asks you to sign in first, because every question lands on one engine behind one tunnel. The
+account rations who may ask; it changes no answer, since the caps and the allowlist are enforced by
+the policy engine either way. Nothing on the site can send funds — this deployment exposes no
+endpoint that executes.
 
 **Have an MCP client?** Point it at the live engine and drive the nine tools yourself:
 [configuration below](#point-your-own-agent-at-it-without-cloning).

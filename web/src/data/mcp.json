@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "transport": "stdio",
   "remote": {
-    "url": "https://oak-tba-dated-modules.trycloudflare.com/mcp",
+    "url": "https://oak-tba-dated-modules.trycloudflare.com",
     "transport": "streamable-http",
     "note": "A live demo endpoint pointing at one laptop. It may rotate; the repository runs the same nine tools locally with npm run mcp:http."
   },

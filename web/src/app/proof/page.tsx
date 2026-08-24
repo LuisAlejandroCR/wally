@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server'
 import clean from '@/data/run-clean.json'
 import poisoned from '@/data/run-poisoned.json'
 import recorded from '@/data/policies.json'
@@ -94,6 +95,9 @@ function Sub ({ children }: { children: React.ReactNode }) {
 
 export default async function ProofPage () {
   const { data, live } = await loadPolicies()
+  // Reading every verdict on this page is open. Making the engine answer a
+  // question of your own is not: it reaches one machine behind one tunnel.
+  const { userId } = await auth()
 
   const caps: { label: string; value: { base: string; legible: string }; unit: string; help: Term }[] = [
     { label: 'Per-transfer cap', value: data.topePorTransferencia, unit: data.token.symbol, help: 'per-transfer-cap' },
@@ -319,10 +323,11 @@ export default async function ProofPage () {
       </div>
       <Sub>Now point one at it yourself</Sub>
       <p className="max-w-3xl text-muted">
-        No account needed — type any address and any amount. Deciding costs no network, so nothing here can be sent
-        or undone.
+        Sign in and type any address and any amount. Deciding costs no network, so nothing here can be sent or
+        undone — the account is there because every question lands on one engine, not because answering it moves
+        anything.
       </p>
-      <PolicyProbe liveConfigured={live} />
+      <PolicyProbe liveConfigured={live} signedIn={userId !== null} />
     </Section>
   )
 

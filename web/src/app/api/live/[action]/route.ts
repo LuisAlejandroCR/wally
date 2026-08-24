@@ -13,10 +13,11 @@ const ALLOWED: Record<string, { path: string; method: 'GET' | 'POST'; open?: boo
   health: { path: '/salud', method: 'GET', open: true },
   policies: { path: '/politicas', method: 'GET', open: true },
   day: { path: '/estado-diario', method: 'GET', open: true },
-  // Asking the lock about one payment moves nothing: no plan, no receipt, no
-  // ledger, no network. Putting an account in front of that would be asking
-  // people to register in order to be told "no", so it stays open.
-  simulate: { path: '/simular', method: 'POST', open: true },
+  // Deciding still moves nothing — no plan, no receipt, no ledger, no network.
+  // The account is not protecting the money, it is rationing the engine: every
+  // probe lands on one machine behind one tunnel, and an open endpoint pointed
+  // at a single laptop is an invitation to hammer it.
+  simulate: { path: '/simular', method: 'POST' },
   // Running a payroll writes a receipt and moves the day's counter, and it is
   // the expensive one. That still needs a signed-in operator.
   run: { path: '/correr', method: 'POST' }
@@ -43,7 +44,7 @@ export async function POST (request: Request, { params }: { params: Promise<{ ac
         401,
         'E_SIN_SESION',
         'This action needs a signed-in operator.',
-        'Sign in from the Operator page. Everything that only reads or decides is open.'
+        'Sign in from the Operator page. Every recorded verdict is readable without one.'
       )
     }
   }

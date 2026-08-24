@@ -175,11 +175,11 @@ export function VoucherChain () {
  * A transcript proves what happened once; a URL lets someone check for
  * themselves, which is a different and better thing to offer. Left open because
  * none of the nine tools can send, approve or read the seed.
- */
+
 export function RemoteEndpoint () {
   return <McpConnect url={mcp.remote.url} note={mcp.remote.note} />
 }
-
+*/
 /**
  * The one live transfer.
  *
