@@ -170,16 +170,17 @@ export function VoucherChain () {
 }
 
 /**
- * The endpoint, spelled out so it can be copied.
+ * Pointing your own agent at it.
  *
- * A transcript proves what happened once; a URL lets someone check for
- * themselves, which is a different and better thing to offer. Left open because
- * none of the nine tools can send, approve or read the seed.
-
-export function RemoteEndpoint () {
-  return <McpConnect url={mcp.remote.url} note={mcp.remote.note} />
+ * A transcript proves what happened once; a config someone can paste lets them
+ * check for themselves, which is a different and better thing to offer. The
+ * engine is in the repository, so the panel hands over the two ways to run it
+ * rather than a URL to one laptop.
+ */
+export function ConnectYourAgent () {
+  return <McpConnect />
 }
-*/
+
 /**
  * The one live transfer.
  *

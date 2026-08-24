@@ -9,7 +9,7 @@ import { policyNameEn, reasonEn, ruleNameEn } from '@/lib/english'
 import { Amount, Checks, DryRunNote, FeeNote, ReceiptTable, RunMeta, StatusPill, Totals, VerdictIcon } from '@/components/Receipt'
 import { CopyAddress } from '@/components/CopyAddress'
 import { ProofTabs } from '@/components/ProofTabs'
-import { AgentTools, LiveTransfer, McpTranscript, RemoteEndpoint, VoucherChain } from '@/components/AgentChannel'
+import { AgentTools, ConnectYourAgent, LiveTransfer, McpTranscript, VoucherChain } from '@/components/AgentChannel'
 import { PolicyProbe } from '@/components/PolicyProbe'
 import { Card, Cta, NextSteps, Note, Page, PageHeader, Section, Stat, StatRow } from '@/components/Page'
 import { Help } from '@/components/Help'
@@ -354,7 +354,7 @@ export default async function ProofPage () {
       <VoucherChain />
 
       <Sub>Point your own agent at it</Sub>
-      <RemoteEndpoint />
+      <ConnectYourAgent />
 
       <Sub>The one time it went all the way through</Sub>
       <LiveTransfer />
